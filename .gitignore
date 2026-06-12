@@ -1,0 +1,8 @@
+.terraform/
+.opentofu/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+*.pem
+.terraform.lock.hcl
+crash.log
