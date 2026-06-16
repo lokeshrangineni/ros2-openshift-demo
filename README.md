@@ -98,6 +98,26 @@ oc exec -n lokesh-ros2-demo <pod-name> -- bash -c '
   ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0}, angular: {z: 0.5}}" --once'
 ```
 
+### Teleoperation (Keyboard Control)
+
+Open a terminal in the running pod (e.g. via OpenShift console) and run:
+```bash
+export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+Keys: `i` = forward, `,` = backward, `j` = turn left, `l` = turn right, `k` = stop.
+
+### Restart Gazebo GUI
+
+If the Gazebo window gets minimized or becomes unresponsive in noVNC, restart it:
+```bash
+oc exec -n lokesh-ros2-demo <pod-name> -- bash -c '
+  export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash; export DISPLAY=:99
+  pkill -f "gz sim -g"; sleep 2
+  nohup gz sim -g > /tmp/ros-home/gz_gui.log 2>&1 &'
+```
+Then refresh the noVNC browser tab.
+
 ### Troubleshooting
 
 **Check robot position:**

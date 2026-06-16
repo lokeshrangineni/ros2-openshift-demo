@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-jazzy-nav2-minimal-tb3-sim \
       ros-jazzy-turtlebot3-gazebo \
       ros-jazzy-turtlebot3-simulations \
+      ros-jazzy-teleop-twist-keyboard \
       mesa-utils \
       libgl1-mesa-dri \
       python3 \
