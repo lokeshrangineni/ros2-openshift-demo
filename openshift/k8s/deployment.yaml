@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ros2-sim
+  namespace: lokesh-ros2-demo
+  labels:
+    app: ros2-sim
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ros2-sim
+  template:
+    metadata:
+      labels:
+        app: ros2-sim
+    spec:
+      serviceAccountName: ros2-demo
+      tolerations:
+        - key: g5-gpu
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+      containers:
+        - name: ros2-sim
+          image: quay.io/lrangine/ros2-demo:latest
+          imagePullPolicy: Always
+          ports:
+            - name: novnc
+              containerPort: 6080
+              protocol: TCP
+            - name: web
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: all
+            - name: TURTLEBOT3_MODEL
+              value: waffle
+            - name: ROS_DISTRO
+              value: jazzy
+            - name: VNC_PORT
+              value: "5900"
+            - name: NOVNC_PORT
+              value: "6080"
+            - name: WEB_PORT
+              value: "8080"
+            - name: WORLD_NAME
+              value: tb3_sandbox
+          resources:
+            requests:
+              cpu: "4"
+              memory: 4Gi
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "8"
+              memory: 8Gi
+              nvidia.com/gpu: "1"
+          readinessProbe:
+            tcpSocket:
+              port: 6080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 20
+          livenessProbe:
+            tcpSocket:
+              port: 6080
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 10

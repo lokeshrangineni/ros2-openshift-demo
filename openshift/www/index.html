@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROS2 + Gazebo Demo on OpenShift</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 760px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.5;
+      color: #1a1a1a;
+    }
+    code, pre {
+      background: #f4f4f4;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+    }
+    pre {
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    a.button {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.6rem 1rem;
+      background: #ee0000;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    a.button:hover { background: #cc0000; }
+  </style>
+</head>
+<body>
+  <h1>ROS2 + Gazebo Demo on OpenShift</h1>
+  <p>
+    This pod runs TurtleBot3 navigation simulation (Nav2 + Gazebo Harmonic) on OpenShift
+    with GPU-accelerated rendering.
+  </p>
+
+  <h2>View the Gazebo Simulation</h2>
+  <p>
+    Click the button below to open the Gazebo GUI in your browser via noVNC.
+    You will see the full 3D simulation of a TurtleBot3 in a sandbox world.
+  </p>
+  <a class="button" id="novnc-link" href="#" target="_blank" rel="noopener">
+    Open Gazebo Visualization (noVNC)
+  </a>
+
+  <h2>What is Running</h2>
+  <ul>
+    <li>ROS2 Jazzy + Nav2 (full navigation stack)</li>
+    <li>Gazebo Harmonic (GPU-accelerated via NVIDIA A10G)</li>
+    <li>TurtleBot3 Waffle with LiDAR, IMU, and camera sensors</li>
+    <li>noVNC for browser-based visualization on port 6080</li>
+  </ul>
+
+  <h2>Architecture</h2>
+  <pre>
+OpenShift Pod
+  ├── Xvfb (virtual display :99)
+  ├── Gazebo GUI (renders to Xvfb)
+  ├── x11vnc (captures display → VNC)
+  ├── noVNC/websockify (VNC → browser)
+  ├── Nav2 (autonomous navigation)
+  └── ROS-Gazebo bridge (sensor data)
+  </pre>
+
+  <script>
+    const host = window.location.hostname.replace(/^ros2-demo-web-/, 'ros2-demo-novnc-');
+    const novncUrl = `https://${host}/vnc.html?autoconnect=true&resize=remote`;
+    document.getElementById('novnc-link').href = novncUrl;
+  </script>
+</body>
+</html>
