@@ -1,0 +1,76 @@
+FROM registry.fedoraproject.org/fedora:41
+
+ENV TURTLEBOT3_MODEL=waffle \
+    ROS_DISTRO=jazzy
+
+# Enable the tavie/ros2 Copr repository (provides ROS2 Jazzy packages for Fedora)
+RUN dnf install -y dnf-plugins-core && \
+    dnf copr enable -y tavie/ros2
+
+# Install ROS2 + Nav2 + TurtleBot3 + Gazebo (via vendor packages)
+RUN dnf install -y \
+      ros-jazzy-ros-base \
+      ros-jazzy-navigation2 \
+      ros-jazzy-nav2-bringup \
+      ros-jazzy-nav2-minimal-tb3-sim \
+      ros-jazzy-teleop-twist-keyboard \
+      ros-jazzy-ros-gz-bridge \
+      ros-jazzy-ros-gz-sim \
+      ros-jazzy-gz-sim-vendor \
+    && dnf clean all
+
+# Install display/VNC stack and Mesa for software rendering
+RUN dnf install -y \
+      mesa-libGL \
+      mesa-dri-drivers \
+      mesa-libEGL \
+      xorg-x11-server-Xvfb \
+      x11vnc \
+      novnc \
+      python3-websockify \
+      openbox \
+      xterm \
+      python3 \
+    && dnf clean all
+
+RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+
+# Fedora Copr installs ROS2 to /usr/lib64/ros2-jazzy/ instead of /opt/ros/jazzy/.
+# The gz_sim_vendor package has hardcoded build-time paths, so we must explicitly
+# set plugin/library paths and pre-populate the server config.
+ENV ROS_PREFIX=/usr/lib64/ros2-jazzy \
+    GZ_SIM_RESOURCE_PATH=/usr/lib64/ros2-jazzy/share/nav2_minimal_tb3_sim/models \
+    GZ_SIM_SYSTEM_PLUGIN_PATH=/usr/lib64/ros2-jazzy/opt/gz_sim_vendor/lib64/gz-sim-8/plugins \
+    GZ_SIM_PHYSICS_ENGINE_PATH=/usr/lib64/ros2-jazzy/opt/gz_physics_vendor/lib64/gz-physics-7/engine-plugins \
+    GZ_RENDERING_PLUGIN_PATH=/usr/lib64/ros2-jazzy/opt/gz_rendering_vendor/lib64/gz-rendering-8/engine-plugins \
+    GZ_GUI_PLUGIN_PATH=/usr/lib64/ros2-jazzy/opt/gz_gui_vendor/lib64/gz-gui-8/plugins:/usr/lib64/ros2-jazzy/opt/gz_sim_vendor/lib64/gz-sim-8/plugins/gui
+
+# Build LD_LIBRARY_PATH from all vendor lib64 dirs and pre-copy server.config
+RUN echo "/usr/lib64/ros2-jazzy/opt/gz_sim_vendor/lib64" > /etc/ld.so.conf.d/gz-vendor.conf && \
+    for d in /usr/lib64/ros2-jazzy/opt/*/lib64; do echo "$d" >> /etc/ld.so.conf.d/gz-vendor.conf; done && \
+    ldconfig && \
+    mkdir -p /etc/gz/sim/8 && \
+    cp /usr/lib64/ros2-jazzy/opt/gz_sim_vendor/share/gz/gz-sim8/server.config /etc/gz/sim/8/
+
+# Work around Copr packaging bug: binaries have hardcoded build-time BUILDROOT
+# paths for Ogre2 shader resources. Create symlinks so those paths resolve.
+RUN mkdir -p /builddir/build/BUILD/ros2-jazzy-gz_rendering_vendor-0.0.6-build && \
+    ln -s / /builddir/build/BUILD/ros2-jazzy-gz_rendering_vendor-0.0.6-build/BUILDROOT && \
+    mkdir -p /usr/lib64/ros2-jazzy/opt/gz_rendering_vendor/share/gz/gz-rendering8/ogre2/src && \
+    ln -s ../media /usr/lib64/ros2-jazzy/opt/gz_rendering_vendor/share/gz/gz-rendering8/ogre2/src/media && \
+    mkdir -p /builddir/build/BUILD/ros2-jazzy-gz_ogre_next_vendor-0.0.5-build && \
+    ln -s / /builddir/build/BUILD/ros2-jazzy-gz_ogre_next_vendor-0.0.5-build/BUILDROOT && \
+    mkdir -p /builddir/build/BUILD/ros2-jazzy-gz_sim_vendor-0.0.8-build && \
+    ln -s / /builddir/build/BUILD/ros2-jazzy-gz_sim_vendor-0.0.8-build/BUILDROOT
+
+WORKDIR /opt/ros2-demo
+
+COPY entrypoint-fedora.sh /entrypoint.sh
+COPY worlds/ /opt/ros2-demo/worlds/
+COPY www/ /opt/ros2-demo/www/
+
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 6080 8080
+
+ENTRYPOINT ["/entrypoint.sh"]
