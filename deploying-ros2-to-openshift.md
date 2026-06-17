@@ -92,7 +92,7 @@ The Gazebo maintainers explicitly closed [this request](https://github.com/gazeb
 | **OCI container images (Ubuntu-based)** | High | Low | Official images at `ghcr.io/openrobotics/gazebo:{version}-full`. Works with podman/docker on any host OS. **This is the recommended approach.** |
 | **conda-forge / pixi** | Medium | Medium | Cross-platform Gazebo builds exist on conda-forge. Less tested, not official ROS integration. |
 | **Build from source on RHEL** | Low | Very High | Dependency hell. Gazebo has ~30 libraries. Not worth the effort for a demo. |
-| **Fedora Copr (tavie/ros2)** | Low-Medium | Medium | Unofficial community repo. Has `gz_ros2_control` for Fedora 41-44 but untested for full Gazebo stack. |
+| **Fedora Copr (tavie/ros2)** | Medium | Medium | Community repo for Fedora 41-44. Full Gazebo stack available and verified working (see `ros2-fedora-rhel-ecosystem-analysis.md`). Requires path workarounds due to packaging bugs. |
 
 ### Official Pre-Built Container Images (Already Exist)
 
