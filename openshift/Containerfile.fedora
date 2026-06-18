@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:41
+FROM registry.fedoraproject.org/fedora:43
 
 ENV TURTLEBOT3_MODEL=waffle \
     ROS_DISTRO=jazzy
@@ -35,33 +35,36 @@ RUN dnf install -y \
 
 RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
 
-# Fedora Copr installs ROS2 to /usr/lib64/ros2-jazzy/ instead of /opt/ros/jazzy/.
+# Work around noVNC 1.5.0 clipboard-handler bug by redirecting to vnc_lite.html
+RUN printf '<!DOCTYPE html>\n<html><head><meta http-equiv="refresh" content="0;url=vnc_lite.html?autoconnect=true&resize=scale"></head></html>\n' > /usr/share/novnc/index.html
+
+# Fedora 43 Copr installs ROS2 to /usr/lib64/ros-jazzy/ instead of /opt/ros/jazzy/.
 # The gz_sim_vendor package has hardcoded build-time paths, so we must explicitly
 # set plugin/library paths and pre-populate the server config.
-ENV ROS_PREFIX=/usr/lib64/ros2-jazzy \
-    GZ_SIM_RESOURCE_PATH=/usr/lib64/ros2-jazzy/share/nav2_minimal_tb3_sim/models \
-    GZ_SIM_SYSTEM_PLUGIN_PATH=/usr/lib64/ros2-jazzy/opt/gz_sim_vendor/lib64/gz-sim-8/plugins \
-    GZ_SIM_PHYSICS_ENGINE_PATH=/usr/lib64/ros2-jazzy/opt/gz_physics_vendor/lib64/gz-physics-7/engine-plugins \
-    GZ_RENDERING_PLUGIN_PATH=/usr/lib64/ros2-jazzy/opt/gz_rendering_vendor/lib64/gz-rendering-8/engine-plugins \
-    GZ_GUI_PLUGIN_PATH=/usr/lib64/ros2-jazzy/opt/gz_gui_vendor/lib64/gz-gui-8/plugins:/usr/lib64/ros2-jazzy/opt/gz_sim_vendor/lib64/gz-sim-8/plugins/gui
+ENV ROS_PREFIX=/usr/lib64/ros-jazzy \
+    GZ_SIM_RESOURCE_PATH=/usr/lib64/ros-jazzy/share/nav2_minimal_tb3_sim/models \
+    GZ_SIM_SYSTEM_PLUGIN_PATH=/usr/lib64/ros-jazzy/opt/gz_sim_vendor/lib64/gz-sim-8/plugins \
+    GZ_SIM_PHYSICS_ENGINE_PATH=/usr/lib64/ros-jazzy/opt/gz_physics_vendor/lib64/gz-physics-7/engine-plugins \
+    GZ_RENDERING_PLUGIN_PATH=/usr/lib64/ros-jazzy/opt/gz_rendering_vendor/lib64/gz-rendering-8/engine-plugins \
+    GZ_GUI_PLUGIN_PATH=/usr/lib64/ros-jazzy/opt/gz_gui_vendor/lib64/gz-gui-8/plugins:/usr/lib64/ros-jazzy/opt/gz_sim_vendor/lib64/gz-sim-8/plugins/gui
 
 # Build LD_LIBRARY_PATH from all vendor lib64 dirs and pre-copy server.config
-RUN echo "/usr/lib64/ros2-jazzy/opt/gz_sim_vendor/lib64" > /etc/ld.so.conf.d/gz-vendor.conf && \
-    for d in /usr/lib64/ros2-jazzy/opt/*/lib64; do echo "$d" >> /etc/ld.so.conf.d/gz-vendor.conf; done && \
+RUN echo "/usr/lib64/ros-jazzy/opt/gz_sim_vendor/lib64" > /etc/ld.so.conf.d/gz-vendor.conf && \
+    for d in /usr/lib64/ros-jazzy/opt/*/lib64; do echo "$d" >> /etc/ld.so.conf.d/gz-vendor.conf; done && \
     ldconfig && \
     mkdir -p /etc/gz/sim/8 && \
-    cp /usr/lib64/ros2-jazzy/opt/gz_sim_vendor/share/gz/gz-sim8/server.config /etc/gz/sim/8/
+    cp /usr/lib64/ros-jazzy/opt/gz_sim_vendor/share/gz/gz-sim8/server.config /etc/gz/sim/8/
 
 # Work around Copr packaging bug: binaries have hardcoded build-time BUILDROOT
 # paths for Ogre2 shader resources. Create symlinks so those paths resolve.
-RUN mkdir -p /builddir/build/BUILD/ros2-jazzy-gz_rendering_vendor-0.0.6-build && \
-    ln -s / /builddir/build/BUILD/ros2-jazzy-gz_rendering_vendor-0.0.6-build/BUILDROOT && \
-    mkdir -p /usr/lib64/ros2-jazzy/opt/gz_rendering_vendor/share/gz/gz-rendering8/ogre2/src && \
-    ln -s ../media /usr/lib64/ros2-jazzy/opt/gz_rendering_vendor/share/gz/gz-rendering8/ogre2/src/media && \
-    mkdir -p /builddir/build/BUILD/ros2-jazzy-gz_ogre_next_vendor-0.0.5-build && \
-    ln -s / /builddir/build/BUILD/ros2-jazzy-gz_ogre_next_vendor-0.0.5-build/BUILDROOT && \
-    mkdir -p /builddir/build/BUILD/ros2-jazzy-gz_sim_vendor-0.0.8-build && \
-    ln -s / /builddir/build/BUILD/ros2-jazzy-gz_sim_vendor-0.0.8-build/BUILDROOT
+RUN mkdir -p /builddir/build/BUILD/ros-jazzy-gz-rendering-vendor-0.0.7-build && \
+    ln -s / /builddir/build/BUILD/ros-jazzy-gz-rendering-vendor-0.0.7-build/BUILDROOT && \
+    mkdir -p /usr/lib64/ros-jazzy/opt/gz_rendering_vendor/share/gz/gz-rendering8/ogre2/src && \
+    ln -s ../media /usr/lib64/ros-jazzy/opt/gz_rendering_vendor/share/gz/gz-rendering8/ogre2/src/media && \
+    mkdir -p /builddir/build/BUILD/ros-jazzy-gz-ogre-next-vendor-0.0.5-build && \
+    ln -s / /builddir/build/BUILD/ros-jazzy-gz-ogre-next-vendor-0.0.5-build/BUILDROOT && \
+    mkdir -p /builddir/build/BUILD/ros-jazzy-gz-sim-vendor-0.0.10-build && \
+    ln -s / /builddir/build/BUILD/ros-jazzy-gz-sim-vendor-0.0.10-build/BUILDROOT
 
 WORKDIR /opt/ros2-demo
 

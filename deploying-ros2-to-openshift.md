@@ -26,7 +26,7 @@ Demonstrate how OpenShift can serve as a platform for running ROS2 robotics simu
 |----------|-------------|-----------------|
 | How can users see the Gazebo simulation? | GzWeb (browser-based) or noVNC | [Section 3](#3-gazebo-visualization-how-do-users-see-the-simulation) |
 | Can we run without a GPU? | Yes, with software rendering (Mesa LLVMpipe) | [Section 4](#4-gpu-requirements-can-we-demo-without-a-gpu) |
-| Can we run on RHEL/Fedora? | ROS2 yes (RHEL 9), Gazebo no (containers only) | [Section 2](#2-os-strategy-rhelfedora-vs-ubuntu) |
+| Can we run on RHEL/Fedora? | ROS2 runtime yes (RHEL 9). Full simulation with Gazebo works on Fedora 43 via Copr. | [Section 2](#2-os-strategy-rhelfedora-vs-ubuntu) |
 | What demo is the right complexity? | TurtleBot3 with Nav2 navigation | [Section 5](#5-demo-application-candidates) |
 
 ---
@@ -57,12 +57,12 @@ RHEL support is **not a recent addition**. It was introduced in Galactic (May 20
 
 ### Current State: What's Available on RHEL 9
 
-| ROS2 Distro | Ubuntu | RHEL | Fedora | Support Tier on RHEL |
-|-------------|--------|------|--------|---------------------|
-| **Humble Hawksbill** (LTS, EOL May 2027) | 22.04 (Tier 1) | RHEL 8 (Tier 2) | Not official | RPM packages available |
-| **Jazzy Jalisco** (LTS, EOL May 2029) | 24.04 (Tier 1) | RHEL 9 (Tier 2) | Not official | RPM packages available |
-| **Kilted Kaiju** (EOL Nov 2026) | 24.04 (Tier 1) | RHEL 9 (Tier 2) | Not official | RPM packages available |
-| **Rolling Ridley** | Latest | RHEL 10 | Not official | RPM packages available |
+| ROS2 Distro | Ubuntu | RHEL | Fedora (Copr) | Support Tier on RHEL |
+|-------------|--------|------|---------------|---------------------|
+| **Humble Hawksbill** (LTS, EOL May 2027) | 22.04 (Tier 1) | RHEL 8 (Tier 2) | Not available | RPM packages available |
+| **Jazzy Jalisco** (LTS, EOL May 2029) | 24.04 (Tier 1) | RHEL 9 (Tier 2) | **Fedora 42–43 (full stack incl. Gazebo)** | RPM packages available (runtime only, no Gazebo) |
+| **Kilted Kaiju** (EOL Nov 2026) | 24.04 (Tier 1) | RHEL 9 (Tier 2) | Not verified | RPM packages available |
+| **Rolling Ridley** | Latest | RHEL 10 | Not verified | RPM packages available |
 
 ### RPM Package Availability for Our Demo (Verified)
 
@@ -92,7 +92,44 @@ The Gazebo maintainers explicitly closed [this request](https://github.com/gazeb
 | **OCI container images (Ubuntu-based)** | High | Low | Official images at `ghcr.io/openrobotics/gazebo:{version}-full`. Works with podman/docker on any host OS. **This is the recommended approach.** |
 | **conda-forge / pixi** | Medium | Medium | Cross-platform Gazebo builds exist on conda-forge. Less tested, not official ROS integration. |
 | **Build from source on RHEL** | Low | Very High | Dependency hell. Gazebo has ~30 libraries. Not worth the effort for a demo. |
-| **Fedora Copr (tavie/ros2)** | Medium | Medium | Community repo for Fedora 41-44. Full Gazebo stack available and verified working (see `ros2-fedora-rhel-ecosystem-analysis.md`). Requires path workarounds due to packaging bugs. |
+| **Fedora Copr (tavie/ros2)** | Medium | Medium | Community repo. Full Gazebo stack verified working on Fedora 42 and 43. Fedora 44 is NOT supported (packages missing). Requires path workarounds due to packaging bugs. See `ros2-fedora-rhel-ecosystem-analysis.md` and [Fedora Version Compatibility](#fedora-version-compatibility) below. |
+
+### Fedora Version Compatibility
+
+The `tavie/ros2` Copr repository claims support for Fedora 41–44, but actual package availability varies significantly by Fedora version. We tested all required packages (`ros-jazzy-ros-base`, `ros-jazzy-navigation2`, `ros-jazzy-nav2-bringup`, `ros-jazzy-nav2-minimal-tb3-sim`, `ros-jazzy-gz-sim-vendor`, `ros-jazzy-ros-gz-sim`, `ros-jazzy-ros-gz-bridge`, `ros-jazzy-teleop-twist-keyboard`) across versions:
+
+| Fedora Version | Packages Available? | ROS Install Path | Verified Working? | Notes |
+|---|---|---|---|---|
+| **Fedora 41** | Yes | `/usr/lib64/ros2-jazzy/` | Yes (earlier testing) | Original base used in initial build |
+| **Fedora 42** | Yes | `/usr/lib64/ros2-jazzy/` | Yes | Stable, well-tested |
+| **Fedora 43** | Yes | `/usr/lib64/ros-jazzy/` | **Yes** (deployed to OpenShift) | Install path renamed; BUILDROOT paths differ from F42 |
+| **Fedora 44** | **No** | N/A | **No** | Copr repo metadata exists (~1.6 KiB) but contains no `ros-jazzy-*` packages |
+
+**Key finding: Fedora 43 is the latest version with full ROS2 Jazzy + Gazebo package support.**
+
+#### Breaking Changes Between Fedora 42 and 43
+
+The `tavie/ros2` Copr changed its packaging layout between Fedora 42 and 43:
+
+| Aspect | Fedora 42 | Fedora 43 |
+|---|---|---|
+| ROS2 install prefix | `/usr/lib64/ros2-jazzy/` | `/usr/lib64/ros-jazzy/` |
+| Package name pattern | `ros2-jazzy-gz_rendering_vendor` | `ros-jazzy-gz-rendering-vendor` |
+| BUILDROOT path example | `ros2-jazzy-gz_rendering_vendor-0.0.6-build` | `ros-jazzy-gz-rendering-vendor-0.0.7-build` |
+| noVNC version | 1.4.x | 1.5.0 (has clipboard handler bug) |
+| Python version | 3.12 | 3.14 |
+
+These changes require updating:
+- All `ENV` variables referencing the ROS prefix
+- All BUILDROOT symlink workarounds (different vendor package versions and naming)
+- The `LD_LIBRARY_PATH` setup in the entrypoint
+- The noVNC landing page (redirect to `vnc_lite.html` to avoid the 1.5.0 UI bug)
+
+The working Fedora 43 Containerfile and entrypoint are in `openshift/Containerfile.fedora` and `openshift/entrypoint-fedora.sh`.
+
+#### Why Fedora 44 Has No Packages
+
+Fedora 44 was released very recently (June 2026). The `tavie/ros2` Copr maintainer has not yet built the ROS2 Jazzy packages for F44. The Copr project page shows F44 as a build target, but the actual repository metadata is nearly empty (~1.6 KiB vs ~1.1 MiB for F43). This may change in the future as the maintainer rebuilds packages for the new Fedora release.
 
 ### Official Pre-Built Container Images (Already Exist)
 
@@ -138,23 +175,47 @@ ENV GALLIUM_DRIVER=llvmpipe
 - Cons: Ubuntu-based. The Red Hat story is limited to "OpenShift orchestrates the workload."
 - Demo narrative: "OpenShift is the platform that orchestrates robotics simulations at scale."
 
-**Path B: UBI 9 + RHEL RPMs (Stronger Red Hat Story — Stretch Goal)**
+**Path B: Fedora 43 + tavie/ros2 Copr (Verified and Deployed)**
+
+```dockerfile
+FROM registry.fedoraproject.org/fedora:43
+
+# Enable the tavie/ros2 Copr repository
+RUN dnf install -y dnf-plugins-core && dnf copr enable -y tavie/ros2
+
+# Install ROS2 + Gazebo + Nav2 + TurtleBot3 from Copr
+RUN dnf install -y \
+      ros-jazzy-ros-base \
+      ros-jazzy-navigation2 \
+      ros-jazzy-nav2-bringup \
+      ros-jazzy-nav2-minimal-tb3-sim \
+      ros-jazzy-teleop-twist-keyboard \
+      ros-jazzy-ros-gz-bridge \
+      ros-jazzy-ros-gz-sim \
+      ros-jazzy-gz-sim-vendor && \
+    dnf clean all
+```
+
+- Pros: Red Hat-family OS. Full Gazebo simulation stack. Verified working on OpenShift with GPU rendering.
+- Cons: Fedora (not RHEL). Community-maintained Copr repo. Requires BUILDROOT symlink workarounds for Ogre2 shaders.
+- Demo narrative: "ROS2 with full Gazebo simulation runs on a Red Hat-family OS. OpenShift orchestrates the workload."
+- Status: **Successfully deployed and verified on OpenShift** (see `openshift/Containerfile.fedora`).
+
+**Path C: UBI 9 + RHEL RPMs (Strongest Red Hat Story — ROS2 Runtime Only)**
 
 ```dockerfile
 FROM registry.access.redhat.com/ubi9/ubi
 
-# Install ROS2 + Gazebo + Nav2 + TurtleBot3 entirely from RHEL 9 RPMs
-# (see "How RHEL Support Makes OpenShift Deployment Easier" section for full Containerfile)
-RUN dnf install -y ... ros-jazzy-ros-base ros-jazzy-gz-sim-vendor \
-      ros-jazzy-turtlebot3-gazebo ros-jazzy-nav2-bringup ... && \
+# Install ROS2 from official RHEL 9 RPMs (no Gazebo simulation)
+RUN dnf install -y ... ros-jazzy-ros-base ros-jazzy-nav2-bringup ... && \
     dnf clean all
 ```
 
-- Pros: All Red Hat stack. Strongest enterprise narrative. UBI vulnerability scanning.
-- Cons: Needs validation (gz_vendor RPMs resolving all deps on UBI 9). More work.
+- Pros: All Red Hat stack. Official packages. UBI vulnerability scanning.
+- Cons: No Gazebo simulation packages available on RHEL 9. Suitable for production ROS2 runtime only.
 - Demo narrative: "ROS2 runs natively on RHEL 9. OpenShift orchestrates. Everything is Red Hat."
 
-**Recommendation: Start with Path A to get a working demo fast, then attempt Path B as a polish step.** If Path B works, switch to it for the final demo — the narrative upgrade is worth it. If it doesn't, Path A is a perfectly good demo on its own.
+**Recommendation:** Path B (Fedora 43) has been validated and deployed successfully to OpenShift with full Gazebo simulation. Use this for demos requiring visual simulation. For production ROS2 deployments without simulation needs, Path C (UBI 9 + RHEL RPMs) provides the strongest enterprise story. Path A remains the simplest option for quick prototyping.
 
 ### How RHEL Support Makes OpenShift Deployment Easier
 
@@ -629,15 +690,18 @@ These are estimates for a simple TurtleBot3 world with software rendering. Actua
 
 ## 8. Risk Register
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| Software rendering too slow for compelling demo | High | Medium | Test early. Fall back to simpler world. Consider GPU node if available. |
-| GzWeb visualization quality insufficient | Medium | Medium | Fall back to noVNC approach. Or use rosbridge + camera feed. |
-| Gazebo + ROS2 container image too large (>5 GB) | Low | High | Use multi-stage builds. Accept large image for demo (not production). |
-| WebSocket routing through OpenShift Route fails | Medium | Low | Test early. May need to use NodePort or configure Route for WebSocket upgrade. |
-| `gz_*_vendor` RPMs don't fully resolve Gazebo deps on UBI 9 | Medium | Medium | Test in Phase 1 step 1. Fall back to Ubuntu-based Gazebo OCI image. The vendor RPMs exist but haven't been tested on bare UBI 9. |
-| Nav2 navigation fails in headless mode | Medium | Low | Nav2 doesn't need a display. LiDAR processing is purely computational. Should work. |
-| DDS multicast issues in OpenShift pod network | Medium | Medium | Use CycloneDDS with unicast configuration. Set `ROS_DOMAIN_ID` per namespace. |
+| Risk | Impact | Likelihood | Mitigation | Status |
+|------|--------|------------|------------|--------|
+| Software rendering too slow for compelling demo | High | Medium | Test early. Fall back to simpler world. Consider GPU node if available. | **Resolved** — GPU rendering works on OpenShift with NVIDIA GPU nodes |
+| GzWeb visualization quality insufficient | Medium | Medium | Fall back to noVNC approach. Or use rosbridge + camera feed. | **Resolved** — noVNC with Gazebo GUI provides full-fidelity visualization |
+| Gazebo + ROS2 container image too large (>5 GB) | Low | High | Use multi-stage builds. Accept large image for demo (not production). | Accepted — image is ~4 GB, acceptable for demo |
+| WebSocket routing through OpenShift Route fails | Medium | Low | Test early. May need to use NodePort or configure Route for WebSocket upgrade. | **Resolved** — Edge TLS termination works with noVNC WebSocket |
+| `gz_*_vendor` RPMs don't fully resolve Gazebo deps on UBI 9 | Medium | Medium | Test in Phase 1 step 1. Fall back to Ubuntu-based Gazebo OCI image. The vendor RPMs exist but haven't been tested on bare UBI 9. | **Resolved via Fedora** — Copr packages work on Fedora 42/43 with symlink workarounds |
+| Nav2 navigation fails in headless mode | Medium | Low | Nav2 doesn't need a display. LiDAR processing is purely computational. Should work. | **Resolved** — Nav2 + Gazebo headless server works correctly |
+| DDS multicast issues in OpenShift pod network | Medium | Medium | Use CycloneDDS with unicast configuration. Set `ROS_DOMAIN_ID` per namespace. | Not encountered in single-pod deployment |
+| Fedora Copr packaging bugs (hardcoded BUILDROOT paths) | Medium | High | Create symlinks for hardcoded Ogre2 shader paths. Update symlinks when moving between Fedora versions. | **Mitigated** — Symlinks in Containerfile resolve the issue |
+| noVNC 1.5.0 clipboard handler bug (Fedora 43) | Low | High | Replace `index.html` with a redirect to `vnc_lite.html` which is self-contained. | **Mitigated** — Build-time redirect to vnc_lite.html |
+| Fedora version upgrades break package paths | Medium | High | Pin base image to a tested version (currently Fedora 43). Test new versions before upgrading. F44 has no packages yet. | **Documented** — See Fedora Version Compatibility section |
 
 ---
 

@@ -18,7 +18,7 @@ fi
 ROS_PREFIX="${ROS_PREFIX:-/opt/ros/${ROS_DISTRO}}"
 
 # Ensure vendor library paths are in LD_LIBRARY_PATH for Gazebo plugins
-for d in /usr/lib64/ros2-jazzy/opt/*/lib64; do
+for d in /usr/lib64/ros-jazzy/opt/*/lib64; do
   [ -d "$d" ] && export LD_LIBRARY_PATH="${d}:${LD_LIBRARY_PATH:-}"
 done
 
