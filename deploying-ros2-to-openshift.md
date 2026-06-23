@@ -125,11 +125,21 @@ These changes require updating:
 - The `LD_LIBRARY_PATH` setup in the entrypoint
 - The noVNC landing page (redirect to `vnc_lite.html` to avoid the 1.5.0 UI bug)
 
-The working Fedora 43 Containerfile and entrypoint are in `openshift/Containerfile.fedora` and `openshift/entrypoint-fedora.sh`.
+The working Fedora 43 Containerfile and entrypoint are in `examples/monolithic/Containerfile.fedora` and `examples/monolithic/entrypoint-fedora.sh`.
 
 #### Why Fedora 44 Has No Packages
 
-Fedora 44 was released very recently (June 2026). The `tavie/ros2` Copr maintainer has not yet built the ROS2 Jazzy packages for F44. The Copr project page shows F44 as a build target, but the actual repository metadata is nearly empty (~1.6 KiB vs ~1.1 MiB for F43). This may change in the future as the maintainer rebuilds packages for the new Fedora release.
+Fedora 44 was released very recently (June 2026). Investigation of the Copr repository metadata confirms that **zero packages** have been built for Fedora 44:
+
+| Metric | Fedora 43 | Fedora 44 |
+|--------|-----------|-----------|
+| Total packages in repo | **5,991** | **0** |
+| `primary.xml` content | Full package metadata (~1.1 MiB) | `<metadata packages="0"></metadata>` (167 bytes) |
+| Repo last updated | Jun 17, 2026 | Mar 25, 2026 (initialized only) |
+
+The Copr project page lists F44 as a build target, and the repository structure was initialized on March 25, 2026, but no packages have ever been built for it. This is not a case of specific packages being missing — the entire repository is empty. The maintainer (tavie) would need to trigger a full rebuild of all 5,991+ packages against Fedora 44's toolchain (including Python 3.14 and updated system libraries) before any ROS2 packages become available.
+
+Until then, **Fedora 43 remains the latest supported version** for the `tavie/ros2` Copr.
 
 ### Official Pre-Built Container Images (Already Exist)
 
@@ -199,7 +209,7 @@ RUN dnf install -y \
 - Pros: Red Hat-family OS. Full Gazebo simulation stack. Verified working on OpenShift with GPU rendering.
 - Cons: Fedora (not RHEL). Community-maintained Copr repo. Requires BUILDROOT symlink workarounds for Ogre2 shaders.
 - Demo narrative: "ROS2 with full Gazebo simulation runs on a Red Hat-family OS. OpenShift orchestrates the workload."
-- Status: **Successfully deployed and verified on OpenShift** (see `openshift/Containerfile.fedora`).
+- Status: **Successfully deployed and verified on OpenShift** (see `examples/monolithic/Containerfile.fedora`).
 
 **Path C: UBI 9 + RHEL RPMs (Strongest Red Hat Story — ROS2 Runtime Only)**
 

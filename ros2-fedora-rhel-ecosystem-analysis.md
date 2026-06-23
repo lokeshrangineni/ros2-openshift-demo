@@ -284,8 +284,8 @@ The accurate messaging is:
 
 | File | Purpose |
 |------|---------|
-| `openshift/Containerfile.fedora` | Fedora 41-based Containerfile with all workarounds |
-| `openshift/entrypoint-fedora.sh` | Modified entrypoint handling Copr-specific paths |
+| `examples/monolithic/Containerfile.fedora` | Fedora 43-based Containerfile with all workarounds |
+| `examples/monolithic/entrypoint-fedora.sh` | Modified entrypoint handling Copr-specific paths |
 
 These are functional and successfully deployed to OpenShift. The Copr packaging workarounds are version-specific (pinned to current package versions) and may need updating when the Copr packages are updated.
 

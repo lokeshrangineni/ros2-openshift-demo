@@ -1,10 +1,32 @@
-# ROS2 Gazebo Development VM (AWS EC2)
+# ROS2 on OpenShift — Deployment Examples
 
-OpenTofu configuration to launch an Ubuntu 22.04 EC2 instance with ROS2 Humble,
-Gazebo, and NICE DCV remote desktop. All setup is done via OpenTofu `remote-exec`
-provisioners — no external scripts.
+Demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on OpenShift, using a Red Hat-family OS (Fedora). Includes infrastructure-as-code for a development VM, container image definitions, OpenShift manifests, and detailed ecosystem documentation.
 
-## Instance Specs
+## Deployment Examples
+
+### [Example 1: Monolithic Single-Pod](examples/monolithic/)
+
+All-in-one deployment — Gazebo simulation, Nav2 navigation stack, and noVNC visualization in a single pod. Uses local DDS for inter-node communication. Best for demos, development, and single-robot scenarios.
+
+```
+Pod: [Gazebo + Nav2 + TurtleBot3 + noVNC]  ← everything in one container
+```
+
+**Status:** Deployed and working on OpenShift.
+
+### [Example 2: Distributed Multi-Pod with Zenoh](examples/distributed-zenoh/)
+
+Splits simulation and robot autonomy into separate pods connected via `zenoh-bridge-ros2dds` sidecars. Demonstrates a production-style distributed ROS2 architecture where each concern scales independently.
+
+```
+Pod A: [Gazebo + zenoh-bridge]  ←── Zenoh TCP ──→  Pod B: [Nav2 + zenoh-bridge]
+```
+
+**Status:** Planned (APPENG-5477).
+
+## Development VM (AWS EC2)
+
+OpenTofu configuration to launch an Ubuntu 22.04 EC2 instance with ROS2 Humble, Gazebo, and NICE DCV remote desktop.
 
 | Component | Default |
 |-----------|---------|
@@ -12,146 +34,60 @@ provisioners — no external scripts.
 | OS | Ubuntu 22.04 LTS |
 | Disk | 50 GB gp3 |
 | Region | us-east-1 |
-| Cost | ~$0.17/hr |
-
-## Deploy
 
 ```bash
 cd infra
-tofu init
-tofu plan
-tofu apply
+tofu init && tofu apply
+
+# Day-to-day
+./start-ros2-vm.sh    # Start the VM
+./stop-ros2-vm.sh     # Stop (save costs)
 ```
 
-## Day-to-day Usage
-
-**Start the VM:**
-```bash
-./start-ros2-vm.sh
-```
-
-**Stop the VM (save costs):**
-```bash
-./stop-ros2-vm.sh
-```
-
-## Connecting
-
-**Cursor Remote-SSH (recommended for development):**
-1. Start the VM
-2. In Cursor: `Cmd+Shift+P` → "Remote-SSH: Connect to Host"
-3. Enter `ubuntu@<PUBLIC_IP>` with the key from `infra/`
-
-**NICE DCV (for Gazebo visuals):**
-- The `start-ros2-vm.sh` script generates a one-click token URL
-
-**SSH (terminal):**
-```bash
-ssh -i infra/<prefix>-ros2-gazebo-dev-key.pem ubuntu@<PUBLIC_IP>
-```
-
-## Teardown
-
-```bash
-cd infra
-tofu destroy
-```
-
-## OpenShift ROS2 Simulation Deployment
-
-The project also includes an OpenShift deployment that runs TurtleBot3 with Nav2 navigation
-in Gazebo, accessible via a browser through noVNC.
-
-### Access the Simulation
+## Quick Access (Monolithic Example — Currently Deployed)
 
 **Gazebo visualization (noVNC):**
 ```
-http://ros2-demo-novnc-lokesh-ros2-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com/vnc.html?autoconnect=true&resize=remote
+https://ros2-demo-novnc-lokesh-ros2-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com/vnc_lite.html?autoconnect=true&resize=scale
 ```
 
-### Navigation Commands
-
-Replace `<pod-name>` with the current pod name (get it with `oc get pods -n lokesh-ros2-demo`).
-
-**Send the robot to a position (obstacle-aware navigation):**
+**Navigate the robot:**
 ```bash
-oc exec -n lokesh-ros2-demo <pod-name> -- bash -c '
-  export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash
+oc exec deployment/ros2-sim -n lokesh-ros2-demo -- bash -c '
+  export HOME=/tmp/ros-home; source /usr/lib64/ros-jazzy/setup.bash
   ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose \
     "{pose: {header: {frame_id: \"map\"}, pose: {position: {x: -2.5, y: 0.5, z: 0.0}, orientation: {w: 1.0}}}}"'
 ```
 
-**Safe goal positions** within the arena (green boxes form a ring):
-- `(-2.5, 0.5)`, `(-1.5, -0.5)`, `(-1.0, -0.5)`, `(-2.0, 0.0)`
-- Stay within ~1m of center at `(-2.0, -0.5)` to avoid obstacles
-
-**Direct velocity control (no obstacle avoidance):**
+**Direct velocity control:**
 ```bash
-# Move forward
-oc exec -n lokesh-ros2-demo <pod-name> -- bash -c '
-  export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash
-  ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2}, angular: {z: 0.0}}" --once'
-
-# Rotate in place
-oc exec -n lokesh-ros2-demo <pod-name> -- bash -c '
-  export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash
-  ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0}, angular: {z: 0.5}}" --once'
+oc exec deployment/ros2-sim -n lokesh-ros2-demo -- bash -c '
+  export HOME=/tmp/ros-home; source /usr/lib64/ros-jazzy/setup.bash
+  ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angular: {z: 0.5}}" -t 20'
 ```
 
-### Teleoperation (Keyboard Control)
+## Documentation
 
-Open a terminal in the running pod (e.g. via OpenShift console) and run:
-```bash
-export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard
+- [Deploying ROS2 to OpenShift](deploying-ros2-to-openshift.md) — architecture decisions, findings, and implementation details
+- [ROS2 Fedora/RHEL Ecosystem Analysis](ros2-fedora-rhel-ecosystem-analysis.md) — gap analysis for running ROS2 on Red Hat platforms
+
+## Repository Structure
+
 ```
-Keys: `i` = forward, `,` = backward, `j` = turn left, `l` = turn right, `k` = stop.
-
-### Restart Gazebo GUI
-
-If the Gazebo window gets minimized or becomes unresponsive in noVNC, restart it:
-```bash
-oc exec -n lokesh-ros2-demo <pod-name> -- bash -c '
-  export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash; export DISPLAY=:99
-  pkill -f "gz sim -g"; sleep 2
-  nohup gz sim -g > /tmp/ros-home/gz_gui.log 2>&1 &'
-```
-Then refresh the noVNC browser tab.
-
-### Troubleshooting
-
-**Check robot position:**
-```bash
-oc exec -n lokesh-ros2-demo <pod-name> -- bash -c '
-  export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash
-  gz model -m turtlebot3_waffle -p'
-```
-
-**Check navigation node status:**
-```bash
-oc exec -n lokesh-ros2-demo <pod-name> -- bash -c '
-  export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash
-  ros2 lifecycle get /planner_server
-  ros2 lifecycle get /bt_navigator
-  ros2 lifecycle get /velocity_smoother
-  ros2 lifecycle get /collision_monitor'
-```
-
-**Manually set initial pose (if navigation fails on restart):**
-```bash
-oc exec -n lokesh-ros2-demo <pod-name> -- bash -c '
-  export HOME=/tmp/ros-home; source /opt/ros/jazzy/setup.bash
-  ros2 topic pub /initialpose geometry_msgs/msg/PoseWithCovarianceStamped \
-    "{header: {frame_id: \"map\"}, pose: {pose: {position: {x: -2.0, y: -0.5, z: 0.0}, orientation: {w: 1.0}}}}" --once'
-```
-
-### Rebuild & Redeploy
-
-```bash
-cd openshift
-podman build -t ros2-nav2-demo:latest -f Containerfile .
-podman tag localhost/ros2-nav2-demo:latest quay.io/lrangine/ros2-demo:latest
-podman push quay.io/lrangine/ros2-demo:latest
-oc rollout restart deployment/ros2-sim -n lokesh-ros2-demo
-oc rollout status deployment/ros2-sim -n lokesh-ros2-demo --timeout=150s
+├── examples/
+│   ├── monolithic/                    # Example 1: single-pod deployment
+│   │   ├── Containerfile              #   Ubuntu-based image
+│   │   ├── Containerfile.fedora       #   Fedora 43 image (active)
+│   │   ├── entrypoint.sh             #   Ubuntu entrypoint
+│   │   ├── entrypoint-fedora.sh      #   Fedora entrypoint
+│   │   ├── worlds/                    #   Gazebo SDF world files
+│   │   ├── www/                       #   Web landing page
+│   │   └── k8s/                       #   OpenShift manifests
+│   └── distributed-zenoh/            # Example 2: multi-pod with Zenoh (planned)
+│       └── README.md
+├── infra/                             # OpenTofu IaC for AWS dev VM
+├── deploying-ros2-to-openshift.md     # Primary documentation
+├── ros2-fedora-rhel-ecosystem-analysis.md
+├── start-ros2-vm.sh
+└── stop-ros2-vm.sh
 ```
