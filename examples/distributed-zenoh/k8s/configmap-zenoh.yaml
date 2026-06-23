@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: zenoh-bridge-config
-  namespace: lokesh-ros2-demo
+  namespace: lokesh-ros2-distributed-demo
   labels:
     app.kubernetes.io/part-of: ros2-distributed
 data:
@@ -28,11 +28,17 @@ data:
       plugins: {
         ros2dds: {}
       },
-      mode: "client",
+      mode: "peer",
       connect: {
         endpoints: [
           "tcp/gazebo-sim-zenoh:7447"
-        ]
+        ],
+        retry: {
+          period_init_ms: 1000,
+          period_max_ms: 16000,
+          period_increase_factor: 2
+        },
+        exit_on_failure: false
       },
       scouting: {
         multicast: {

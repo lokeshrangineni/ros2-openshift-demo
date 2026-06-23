@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROS2 + Gazebo Demo on OpenShift</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 760px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.5;
+      color: #1a1a1a;
+    }
+    code, pre {
+      background: #f4f4f4;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+    }
+    pre {
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    a.button {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.6rem 1rem;
+      background: #ee0000;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    a.button:hover { background: #cc0000; }
+  </style>
+</head>
+<body>
+  <h1>ROS2 + Gazebo Distributed Demo on OpenShift</h1>
+  <p>
+    This is the Gazebo simulation pod of a distributed ROS2 deployment.
+    Nav2 (navigation) runs in a separate pod, connected via Zenoh.
+  </p>
+
+  <h2>View the Gazebo Simulation</h2>
+  <p>
+    Click the button below to open the Gazebo GUI in your browser via noVNC.
+    You will see the full 3D simulation of a TurtleBot3 in a sandbox world.
+  </p>
+  <a class="button" id="novnc-link" href="#" target="_blank" rel="noopener">
+    Open Gazebo Visualization (noVNC)
+  </a>
+
+  <h2>What is Running</h2>
+  <ul>
+    <li><strong>This pod (gazebo-sim):</strong> Gazebo Harmonic, ros_gz_bridge, robot_state_publisher, VNC visualization</li>
+    <li><strong>Separate pod (robot-nav):</strong> Nav2 full navigation stack (AMCL, planner, controller)</li>
+    <li><strong>Communication:</strong> zenoh-bridge-ros2dds sidecars bridge ROS2 topics between pods over TCP</li>
+    <li>TurtleBot3 Waffle with LiDAR, IMU, and camera sensors</li>
+  </ul>
+
+  <h2>Architecture</h2>
+  <pre>
+Pod: gazebo-sim                    Pod: robot-nav
+  ├── Gazebo server (physics)        ├── AMCL (localization)
+  ├── ros_gz_bridge (Gz↔ROS2)       ├── planner_server
+  ├── robot_state_publisher          ├── controller_server
+  ├── Xvfb + x11vnc + noVNC         ├── bt_navigator
+  └── zenoh-bridge (router)          └── zenoh-bridge (peer)
+         ◄──── Zenoh TCP :7447 ────►
+  </pre>
+
+  <script>
+    const host = window.location.hostname.replace(/^ros2-distributed-web-/, 'ros2-distributed-novnc-');
+    const novncUrl = `https://${host}/vnc_lite.html?autoconnect=true&resize=remote`;
+    document.getElementById('novnc-link').href = novncUrl;
+  </script>
+</body>
+</html>

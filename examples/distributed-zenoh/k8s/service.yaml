@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gazebo-sim-zenoh
-  namespace: lokesh-ros2-demo
+  namespace: lokesh-ros2-distributed-demo
   labels:
     app: gazebo-sim
     app.kubernetes.io/part-of: ros2-distributed
@@ -19,7 +19,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gazebo-sim-novnc
-  namespace: lokesh-ros2-demo
+  namespace: lokesh-ros2-distributed-demo
   labels:
     app: gazebo-sim
     app.kubernetes.io/part-of: ros2-distributed
@@ -36,7 +36,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gazebo-sim-web
-  namespace: lokesh-ros2-demo
+  namespace: lokesh-ros2-distributed-demo
   labels:
     app: gazebo-sim
     app.kubernetes.io/part-of: ros2-distributed

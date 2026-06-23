@@ -20,7 +20,7 @@ Splits the simulation and robot autonomy into separate OpenShift pods, connected
 │  │  zenoh-bridge-ros2dds              │ │ Zenoh │  └────────────────────────────────┘ │
 │  │  mode: router                      │◄┼──TCP──┼► ┌─ Sidecar: zenoh-bridge ────────┐ │
 │  │  listen: tcp/0.0.0.0:7447         │ │ 7447  │  │  zenoh-bridge-ros2dds           │ │
-│  └─────────────────────────────────────┘ │       │  │  mode: client                   │ │
+│  └─────────────────────────────────────┘ │       │  │  mode: peer                     │ │
 │                                           │       │  │  connect: tcp/gazebo-sim:7447   │ │
 └───────────────────────────────────────────┘       │  └────────────────────────────────┘ │
                                                     └──────────────────────────────────────┘
@@ -60,9 +60,9 @@ Splits the simulation and robot autonomy into separate OpenShift pods, connected
 ├── entrypoint-gazebo.sh          # Gazebo pod: simulation + viz + ros_gz_bridge
 ├── entrypoint-nav2.sh            # Nav2 pod: navigation stack only
 ├── zenoh-bridge-gazebo.json5     # Zenoh bridge config (router mode)
-├── zenoh-bridge-nav2.json5       # Zenoh bridge config (client mode)
-├── worlds/ -> ../monolithic/worlds  # Shared Gazebo world files
-├── www/ -> ../monolithic/www        # Shared web landing page
+├── zenoh-bridge-nav2.json5       # Zenoh bridge config (peer mode)
+├── worlds/                          # Gazebo world files (copied from monolithic)
+├── www/                             # Web landing page (copied from monolithic)
 └── k8s/
     ├── namespace.yaml
     ├── serviceaccount.yaml
@@ -92,7 +92,7 @@ podman push quay.io/lrangine/ros2-demo:distributed
 ### 3. Deploy to OpenShift
 
 ```bash
-oc project lokesh-ros2-demo
+oc project lokesh-ros2-distributed-demo
 
 # Apply all manifests
 oc apply -f k8s/namespace.yaml
@@ -137,6 +137,26 @@ oc exec deployment/robot-nav -c nav2 -- bash -c '
 | **Latency** | Minimal (localhost) | Network hop via Zenoh (~1-2ms on same node) |
 | **Complexity** | Low | Medium (Zenoh config, split entrypoints) |
 | **Image** | `quay.io/lrangine/ros2-demo:fedora` | `quay.io/lrangine/ros2-demo:distributed` |
+
+### 5. Access the simulation
+
+- **noVNC (simulation view):** https://ros2-distributed-novnc-lokesh-ros2-distributed-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com
+- **Web landing page:** https://ros2-distributed-web-lokesh-ros2-distributed-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com
+
+### 6. Move the robot (from Nav2 pod via Zenoh)
+
+```bash
+oc exec deployment/robot-nav -c nav2 -n lokesh-ros2-distributed-demo -- bash -c '
+  export HOME=/tmp/ros-home; source /usr/lib64/ros-jazzy/setup.bash
+  ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angular: {z: 0.5}}" -t 20'
+```
+
+## Deployment Details
+
+- **OpenShift namespace:** `lokesh-ros2-distributed-demo`
+- **Container image:** `quay.io/lrangine/ros2-demo:distributed`
+- **Zenoh bridge image:** `eclipse/zenoh-bridge-ros2dds:latest`
+- **Nav2 launch mode:** non-composed (`use_composition:=False`) for reliability in distributed setup
 
 ## Known Risks
 

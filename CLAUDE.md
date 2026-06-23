@@ -20,7 +20,13 @@ This repository demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on Op
 │ │ ├── www/ # Web landing page served on port 8080
 │ │ └── k8s/ # OpenShift manifests (deployment, service, route)
 │ └── distributed-zenoh/ # Example 2: multi-pod with zenoh-bridge-ros2dds
-│ └── README.md # Architecture plan (APPENG-5477)
+│ ├── Containerfile.fedora # Single image for both pods
+│ ├── entrypoint-gazebo.sh # Gazebo pod entrypoint
+│ ├── entrypoint-nav2.sh # Nav2 pod entrypoint
+│ ├── zenoh-bridge-*.json5 # Zenoh bridge configs
+│ ├── worlds/ # Gazebo world files
+│ ├── www/ # Web landing page
+│ └── k8s/ # OpenShift manifests (2 deployments, services, routes)
 ├── infra/ # OpenTofu IaC for AWS dev VM (ROS2 Humble + Gazebo Classic)
 ├── start-ros2-vm.sh # Helper to start the AWS dev VM
 └── stop-ros2-vm.sh # Helper to stop the AWS dev VM
@@ -38,10 +44,17 @@ This repository demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on Op
 - **Visualization:** noVNC (vnc_lite.html) via x11vnc + websockify
 - **Files:** `examples/monolithic/`
 
-### Example 2: Distributed Zenoh Deployment — Planned
+### Example 2: Distributed Zenoh Deployment — Active
 
 - **Architecture:** Gazebo sim pod + Robot nav pod, connected via zenoh-bridge-ros2dds sidecars
 - **Jira:** APPENG-5477 (depends on APPENG-5460 for Zenoh sidecar setup)
+- **Container registry:** `quay.io/lrangine/ros2-demo:distributed`
+- **OpenShift namespace:** `lokesh-ros2-distributed-demo`
+- **Zenoh bridge image:** `eclipse/zenoh-bridge-ros2dds:latest`
+- **Nav2 launch mode:** non-composed (`use_composition:=False`)
+- **Zenoh topology:** Gazebo pod (router mode, listen 7447) ↔ Nav2 pod (peer mode, connect to router)
+- **noVNC:** `https://ros2-distributed-novnc-lokesh-ros2-distributed-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com`
+- **Web:** `https://ros2-distributed-web-lokesh-ros2-distributed-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com`
 - **Files:** `examples/distributed-zenoh/`
 
 ### Critical Workarounds (Fedora 43 Copr packaging bugs)
@@ -96,6 +109,6 @@ oc exec deployment/ros2-sim -- bash -c "export HOME=/tmp/ros-home && source /usr
 - Container images target `linux/amd64` architecture
 - All documentation is in Markdown at the repo root
 - Each example is self-contained under `examples/<name>/` with its own Containerfiles, entrypoints, and K8s manifests
-- OpenShift manifests use the `lokesh-ros2-demo` namespace
+- OpenShift manifests: monolithic uses `lokesh-ros2-demo`, distributed uses `lokesh-ros2-distributed-demo`
 - The entrypoint script handles GPU detection and falls back to software rendering (LLVMpipe)
 - Gazebo runs in headless server mode; GUI client connects separately for visualization

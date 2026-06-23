@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: robot-nav
-  namespace: lokesh-ros2-demo
+  namespace: lokesh-ros2-distributed-demo
   labels:
     app: robot-nav
     app.kubernetes.io/part-of: ros2-distributed
@@ -39,13 +39,15 @@ spec:
               cpu: "4"
               memory: 4Gi
 
-        # --- Sidecar: zenoh-bridge-ros2dds (client mode) ---
+        # --- Sidecar: zenoh-bridge-ros2dds (peer mode) ---
         - name: zenoh-bridge
           image: eclipse/zenoh-bridge-ros2dds:latest
           args: ["-c", "/zenoh-config/nav2-bridge.json5"]
           env:
             - name: ROS_DOMAIN_ID
               value: "0"
+            - name: ROS_DISTRO
+              value: jazzy
           volumeMounts:
             - name: zenoh-config
               mountPath: /zenoh-config

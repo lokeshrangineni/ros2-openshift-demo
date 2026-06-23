@@ -2,7 +2,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: ros2-distributed-novnc
-  namespace: lokesh-ros2-demo
+  namespace: lokesh-ros2-distributed-demo
   labels:
     app: gazebo-sim
     app.kubernetes.io/part-of: ros2-distributed
@@ -24,7 +24,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: ros2-distributed-web
-  namespace: lokesh-ros2-demo
+  namespace: lokesh-ros2-distributed-demo
   labels:
     app: gazebo-sim
     app.kubernetes.io/part-of: ros2-distributed

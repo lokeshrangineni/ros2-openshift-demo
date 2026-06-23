@@ -26,7 +26,7 @@ source "${ROS_PREFIX}/setup.bash"
 set -u
 
 export TURTLEBOT3_MODEL="${TURTLEBOT3_MODEL:-waffle}"
-export GZ_SIM_RESOURCE_PATH="${ROS_PREFIX}/share/nav2_minimal_tb3_sim/models:${GZ_SIM_RESOURCE_PATH:-}"
+export GZ_SIM_RESOURCE_PATH="${ROS_PREFIX}/share:${ROS_PREFIX}/share/nav2_minimal_tb3_sim/models:${GZ_SIM_RESOURCE_PATH:-}"
 
 if nvidia-smi &>/dev/null; then
   echo "[gazebo-pod] NVIDIA GPU detected, configuring GPU rendering..."

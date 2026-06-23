@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gazebo-sim
-  namespace: lokesh-ros2-demo
+  namespace: lokesh-ros2-distributed-demo
   labels:
     app: gazebo-sim
     app.kubernetes.io/part-of: ros2-distributed
@@ -90,6 +90,8 @@ spec:
           env:
             - name: ROS_DOMAIN_ID
               value: "0"
+            - name: ROS_DISTRO
+              value: jazzy
           volumeMounts:
             - name: zenoh-config
               mountPath: /zenoh-config
