@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gazebo-sim-zenoh
+  namespace: lokesh-ros2-demo
+  labels:
+    app: gazebo-sim
+    app.kubernetes.io/part-of: ros2-distributed
+spec:
+  selector:
+    app: gazebo-sim
+  ports:
+    - name: zenoh
+      port: 7447
+      targetPort: 7447
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gazebo-sim-novnc
+  namespace: lokesh-ros2-demo
+  labels:
+    app: gazebo-sim
+    app.kubernetes.io/part-of: ros2-distributed
+spec:
+  selector:
+    app: gazebo-sim
+  ports:
+    - name: novnc
+      port: 6080
+      targetPort: 6080
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gazebo-sim-web
+  namespace: lokesh-ros2-demo
+  labels:
+    app: gazebo-sim
+    app.kubernetes.io/part-of: ros2-distributed
+spec:
+  selector:
+    app: gazebo-sim
+  ports:
+    - name: web
+      port: 8080
+      targetPort: 8080
+      protocol: TCP

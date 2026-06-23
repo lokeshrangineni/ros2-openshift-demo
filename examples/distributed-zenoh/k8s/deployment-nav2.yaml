@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: robot-nav
+  namespace: lokesh-ros2-demo
+  labels:
+    app: robot-nav
+    app.kubernetes.io/part-of: ros2-distributed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-nav
+  template:
+    metadata:
+      labels:
+        app: robot-nav
+        app.kubernetes.io/part-of: ros2-distributed
+    spec:
+      serviceAccountName: ros2-demo
+      containers:
+        # --- Main container: Nav2 autonomy stack ---
+        - name: nav2
+          image: quay.io/lrangine/ros2-demo:distributed
+          imagePullPolicy: Always
+          command: ["/entrypoint-nav2.sh"]
+          env:
+            - name: TURTLEBOT3_MODEL
+              value: waffle
+            - name: ROS_DISTRO
+              value: jazzy
+            - name: ROS_DOMAIN_ID
+              value: "0"
+          resources:
+            requests:
+              cpu: "2"
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+
+        # --- Sidecar: zenoh-bridge-ros2dds (client mode) ---
+        - name: zenoh-bridge
+          image: eclipse/zenoh-bridge-ros2dds:latest
+          args: ["-c", "/zenoh-config/nav2-bridge.json5"]
+          env:
+            - name: ROS_DOMAIN_ID
+              value: "0"
+          volumeMounts:
+            - name: zenoh-config
+              mountPath: /zenoh-config
+              readOnly: true
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: zenoh-config
+          configMap:
+            name: zenoh-bridge-config

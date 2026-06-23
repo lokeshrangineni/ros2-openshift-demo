@@ -1,0 +1,24 @@
+{
+  plugins: {
+    ros2dds: {
+      // No ROS namespace — Nav2 nodes use root namespace, matching Gazebo side
+    }
+  },
+
+  // Client mode: connect to the Gazebo pod's zenoh router
+  mode: "client",
+
+  connect: {
+    endpoints: [
+      // The K8s Service "gazebo-sim-zenoh" resolves to the Gazebo pod
+      "tcp/gazebo-sim-zenoh:7447"
+    ]
+  },
+
+  // Scouting disabled — static endpoint configuration
+  scouting: {
+    multicast: {
+      enabled: false
+    }
+  }
+}

@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zenoh-bridge-config
+  namespace: lokesh-ros2-demo
+  labels:
+    app.kubernetes.io/part-of: ros2-distributed
+data:
+  gazebo-bridge.json5: |
+    {
+      plugins: {
+        ros2dds: {}
+      },
+      mode: "router",
+      listen: {
+        endpoints: [
+          "tcp/0.0.0.0:7447"
+        ]
+      },
+      scouting: {
+        multicast: {
+          enabled: false
+        }
+      }
+    }
+  nav2-bridge.json5: |
+    {
+      plugins: {
+        ros2dds: {}
+      },
+      mode: "client",
+      connect: {
+        endpoints: [
+          "tcp/gazebo-sim-zenoh:7447"
+        ]
+      },
+      scouting: {
+        multicast: {
+          enabled: false
+        }
+      }
+    }

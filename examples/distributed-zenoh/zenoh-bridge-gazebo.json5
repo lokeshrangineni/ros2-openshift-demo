@@ -1,0 +1,24 @@
+{
+  plugins: {
+    ros2dds: {
+      // No ROS namespace — Gazebo topics use root namespace
+      // The bridge discovers all local DDS topics and routes them over Zenoh
+    }
+  },
+
+  // Router mode: accept incoming connections from the Nav2 pod's bridge
+  mode: "router",
+
+  listen: {
+    endpoints: [
+      "tcp/0.0.0.0:7447"
+    ]
+  },
+
+  // Scouting disabled — we use static endpoints, not multicast discovery
+  scouting: {
+    multicast: {
+      enabled: false
+    }
+  }
+}

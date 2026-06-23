@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gazebo-sim
+  namespace: lokesh-ros2-demo
+  labels:
+    app: gazebo-sim
+    app.kubernetes.io/part-of: ros2-distributed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gazebo-sim
+  template:
+    metadata:
+      labels:
+        app: gazebo-sim
+        app.kubernetes.io/part-of: ros2-distributed
+    spec:
+      serviceAccountName: ros2-demo
+      tolerations:
+        - key: g5-gpu
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+      containers:
+        # --- Main container: Gazebo simulation + visualization ---
+        - name: gazebo
+          image: quay.io/lrangine/ros2-demo:distributed
+          imagePullPolicy: Always
+          command: ["/entrypoint-gazebo.sh"]
+          ports:
+            - name: novnc
+              containerPort: 6080
+              protocol: TCP
+            - name: web
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: all
+            - name: TURTLEBOT3_MODEL
+              value: waffle
+            - name: ROS_DISTRO
+              value: jazzy
+            - name: VNC_PORT
+              value: "5900"
+            - name: NOVNC_PORT
+              value: "6080"
+            - name: WEB_PORT
+              value: "8080"
+            - name: WORLD_NAME
+              value: tb3_sandbox
+            - name: ROS_DOMAIN_ID
+              value: "0"
+          resources:
+            requests:
+              cpu: "4"
+              memory: 4Gi
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "8"
+              memory: 8Gi
+              nvidia.com/gpu: "1"
+          readinessProbe:
+            tcpSocket:
+              port: 6080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 20
+          livenessProbe:
+            tcpSocket:
+              port: 6080
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 10
+
+        # --- Sidecar: zenoh-bridge-ros2dds (router mode) ---
+        - name: zenoh-bridge
+          image: eclipse/zenoh-bridge-ros2dds:latest
+          args: ["-c", "/zenoh-config/gazebo-bridge.json5"]
+          ports:
+            - name: zenoh
+              containerPort: 7447
+              protocol: TCP
+          env:
+            - name: ROS_DOMAIN_ID
+              value: "0"
+          volumeMounts:
+            - name: zenoh-config
+              mountPath: /zenoh-config
+              readOnly: true
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: zenoh-config
+          configMap:
+            name: zenoh-bridge-config
