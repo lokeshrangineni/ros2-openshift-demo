@@ -109,3 +109,15 @@ oc exec deployment/ros2-sim -- bash -c "export HOME=/tmp/ros-home && source /usr
 - OpenShift manifests: monolithic uses `lokesh-ros2-demo`, distributed uses `lokesh-ros2-distributed-demo`
 - The entrypoint script handles GPU detection and falls back to software rendering (LLVMpipe)
 - Gazebo runs in headless server mode; GUI client connects separately for visualization
+
+## Pre-Commit Security Check
+
+Before committing any changes to GitHub, scan all staged files for personal, secure, or sensitive information. Reject the commit if any of the following are found:
+
+- **Private keys:** `*.pem`, `*.key`, `BEGIN PRIVATE KEY`, `BEGIN RSA PRIVATE KEY`, `BEGIN EC PRIVATE KEY`
+- **Credentials/tokens:** AWS access keys (`AKIA...`), API tokens, passwords, `aws_secret_access_key`, bearer tokens
+- **Infrastructure state:** `*.tfstate`, `*.tfstate.backup` (may contain secrets from cloud providers)
+- **Environment files:** `.env` files with secrets, `credentials.json`, `kubeconfig` files with embedded tokens
+- **Personal data:** Hardcoded IP addresses, SSH connection strings with usernames, account IDs
+
+Run `git diff --cached --name-only` to list staged files and `git diff --cached` to inspect their contents before every commit. If sensitive data is found, unstage the file and add it to `.gitignore` if appropriate.
