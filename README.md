@@ -1,6 +1,6 @@
 # ROS2 on OpenShift — Deployment Examples
 
-Demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on OpenShift, using a Red Hat-family OS (Fedora). Includes infrastructure-as-code for a development VM, container image definitions, OpenShift manifests, and detailed ecosystem documentation.
+Demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on OpenShift, using a Red Hat-family OS (Fedora). Includes container image definitions, OpenShift manifests, and detailed ecosystem documentation.
 
 ## Deployment Examples
 
@@ -22,27 +22,7 @@ Splits simulation and robot autonomy into separate pods connected via `zenoh-bri
 Pod A: [Gazebo + zenoh-bridge]  ←── Zenoh TCP ──→  Pod B: [Nav2 + zenoh-bridge]
 ```
 
-**Status:** Planned (APPENG-5477).
-
-## Development VM (AWS EC2)
-
-OpenTofu configuration to launch an Ubuntu 22.04 EC2 instance with ROS2 Humble, Gazebo, and NICE DCV remote desktop.
-
-| Component | Default |
-|-----------|---------|
-| Instance type | t3.xlarge (4 vCPU, 16 GB RAM) |
-| OS | Ubuntu 22.04 LTS |
-| Disk | 50 GB gp3 |
-| Region | us-east-1 |
-
-```bash
-cd infra
-tofu init && tofu apply
-
-# Day-to-day
-./start-ros2-vm.sh    # Start the VM
-./stop-ros2-vm.sh     # Stop (save costs)
-```
+**Status:** Deployed and working on OpenShift (APPENG-5477).
 
 ## Quick Access (Monolithic Example — Currently Deployed)
 
@@ -83,11 +63,14 @@ oc exec deployment/ros2-sim -n lokesh-ros2-demo -- bash -c '
 │   │   ├── worlds/                    #   Gazebo SDF world files
 │   │   ├── www/                       #   Web landing page
 │   │   └── k8s/                       #   OpenShift manifests
-│   └── distributed-zenoh/            # Example 2: multi-pod with Zenoh (planned)
-│       └── README.md
-├── infra/                             # OpenTofu IaC for AWS dev VM
+│   └── distributed-zenoh/            # Example 2: multi-pod with Zenoh
+│       ├── Containerfile.fedora
+│       ├── entrypoint-gazebo.sh
+│       ├── entrypoint-nav2.sh
+│       ├── zenoh-bridge-*.json5
+│       ├── worlds/
+│       ├── www/
+│       └── k8s/
 ├── deploying-ros2-to-openshift.md     # Primary documentation
-├── ros2-fedora-rhel-ecosystem-analysis.md
-├── start-ros2-vm.sh
-└── stop-ros2-vm.sh
+└── ros2-fedora-rhel-ecosystem-analysis.md
 ```

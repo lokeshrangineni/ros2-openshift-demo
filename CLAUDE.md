@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This repository demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on OpenShift, using a Red Hat-family OS (Fedora). It includes infrastructure-as-code for a development VM, container image definitions for OpenShift deployment, and detailed documentation of ecosystem findings.
+This repository demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on OpenShift, using a Red Hat-family OS (Fedora). It includes container image definitions for OpenShift deployment and detailed documentation of ecosystem findings.
 
 ## Repository Structure
 
@@ -27,9 +27,6 @@ This repository demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on Op
 │ ├── worlds/ # Gazebo world files
 │ ├── www/ # Web landing page
 │ └── k8s/ # OpenShift manifests (2 deployments, services, routes)
-├── infra/ # OpenTofu IaC for AWS dev VM (ROS2 Humble + Gazebo Classic)
-├── start-ros2-vm.sh # Helper to start the AWS dev VM
-└── stop-ros2-vm.sh # Helper to stop the AWS dev VM
 ```
 
 ## Key Technical Details
