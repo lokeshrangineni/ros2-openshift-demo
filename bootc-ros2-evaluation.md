@@ -4,6 +4,8 @@
 
 This document evaluates the feasibility of layering ROS2 Fedora packages into a bootc-compatible image for deploying ROS2 on real robot hardware. Bootc (bootable containers) represents Red Hat's container-native approach to OS lifecycle management — delivering the entire operating system as an immutable OCI image with atomic updates and rollback capabilities.
 
+> **Note:** Only the **Fedora 43 bootc** path has been validated hands-on (see `examples/bootc/TEST_RESULTS.md`). RHEL 9/10 paths are documented as realistic future options based on research, but have not been tested.
+
 **Key findings:**
 
 - **ROS2 runtime packages can be layered into a bootc image** using standard `dnf install` during the container build. The Fedora `tavie/ros2` Copr repository (5,991 packages on Fedora 43) and official RHEL 9 ROS2 RPMs (964 packages) both work within the bootc build model.
@@ -348,6 +350,8 @@ On a bootc system, these symlinks are part of the immutable image and guaranteed
 ---
 
 ## 6. Realistic Deployment Paths
+
+> **Tested:** Only Path 2 (Fedora 43 bootc) has been validated end-to-end. Paths 1, 3, and 4 are based on research and documented as future options.
 
 ### Path 1: RHEL 10 Bootc — Production Robot Runtime (No Simulation)
 
