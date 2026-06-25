@@ -22,13 +22,13 @@ Splits simulation and robot autonomy into separate pods connected via `zenoh-bri
 Pod A: [Gazebo + zenoh-bridge]  ←── Zenoh TCP ──→  Pod B: [Nav2 + zenoh-bridge]
 ```
 
-**Status:** Deployed and working on OpenShift (APPENG-5477).
+**Status:** Deployed and working on OpenShift.
 
 ## Quick Access (Monolithic Example — Currently Deployed)
 
 **Gazebo visualization (noVNC):**
 ```
-https://ros2-demo-novnc-lokesh-ros2-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com/vnc_lite.html?autoconnect=true&resize=scale
+https://<novnc-route>.<cluster-domain>/vnc_lite.html?autoconnect=true&resize=scale
 ```
 
 **Navigate the robot:**

@@ -1,6 +1,6 @@
 # Example 2: Distributed Multi-Pod Deployment with Zenoh
 
-> **Jira:** APPENG-5477 (depends on APPENG-5460 for Zenoh sidecar setup by Jianrong)
+> Multi-pod ROS2 deployment with zenoh-bridge-ros2dds for cross-pod DDS communication.
 
 Splits the simulation and robot autonomy into separate OpenShift pods, connected via [zenoh-bridge-ros2dds](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds) sidecars. This validates bidirectional communication: the robot receives simulated sensor inputs from Gazebo and sends motor commands back.
 
@@ -140,8 +140,8 @@ oc exec deployment/robot-nav -c nav2 -- bash -c '
 
 ### 5. Access the simulation
 
-- **noVNC (simulation view):** https://ros2-distributed-novnc-lokesh-ros2-distributed-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com
-- **Web landing page:** https://ros2-distributed-web-lokesh-ros2-distributed-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com
+- **noVNC (simulation view):** `https://<novnc-route>.<cluster-domain>`
+- **Web landing page:** `https://<web-route>.<cluster-domain>`
 
 ### 6. Move the robot (from Nav2 pod via Zenoh)
 

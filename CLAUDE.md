@@ -48,14 +48,13 @@ This repository demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on Op
 ### Example 2: Distributed Zenoh Deployment — Active
 
 - **Architecture:** Gazebo sim pod + Robot nav pod, connected via zenoh-bridge-ros2dds sidecars
-- **Jira:** APPENG-5477 (depends on APPENG-5460 for Zenoh sidecar setup)
 - **Container registry:** `quay.io/lrangine/ros2-demo:distributed`
 - **OpenShift namespace:** `lokesh-ros2-distributed-demo`
 - **Zenoh bridge image:** `eclipse/zenoh-bridge-ros2dds:latest`
 - **Nav2 launch mode:** non-composed (`use_composition:=False`)
 - **Zenoh topology:** Gazebo pod (router mode, listen 7447) ↔ Nav2 pod (peer mode, connect to router)
-- **noVNC:** `https://ros2-distributed-novnc-lokesh-ros2-distributed-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com`
-- **Web:** `https://ros2-distributed-web-lokesh-ros2-distributed-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com`
+- **noVNC:** `https://<novnc-route>.<cluster-domain>`
+- **Web:** `https://<web-route>.<cluster-domain>`
 - **Files:** `examples/distributed-zenoh/`
 
 ### Critical Workarounds (Fedora 43 Copr packaging bugs)
@@ -102,8 +101,8 @@ oc exec deployment/ros2-sim -- bash -c "export HOME=/tmp/ros-home && source /usr
 
 ### Access URLs (OpenShift Routes)
 
-- **noVNC simulation view:** `https://ros2-demo-novnc-lokesh-ros2-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com`
-- **Web landing page:** `https://ros2-demo-web-lokesh-ros2-demo.apps.ai-dev02.kni.syseng.devcluster.openshift.com`
+- **noVNC simulation view:** `https://<novnc-route>.<cluster-domain>`
+- **Web landing page:** `https://<web-route>.<cluster-domain>`
 
 ## Conventions
 

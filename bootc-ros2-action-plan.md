@@ -1,6 +1,6 @@
 # Action Plan: ROS2 on Fedora Bootc
 
-## JIRAs
+## Goals
 
 - Research bootc image layering for ROS2 on Fedora (documentation/research)
 - Build a minimal Fedora bootc image that boots a VM and runs a ROS2 node (proof-of-concept)
@@ -471,7 +471,7 @@ rpm -q ros-jazzy-teleop-twist-keyboard   # Should NOT be found (we're back on v1
 
 ## Phase 6: Documentation and Wrap-Up (Day 6-7)
 
-**Goal:** Finalize documentation for both JIRAs.
+**Goal:** Finalize documentation for both tasks.
 
 ### For Research (already mostly done)
 
