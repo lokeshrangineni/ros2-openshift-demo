@@ -1,0 +1,20 @@
+FROM quay.io/fedora/fedora-bootc:43
+
+# DNF5 on Fedora 43: install the copr plugin for dnf5, then enable the ROS2 Copr repo
+RUN dnf install -y "dnf5-command(copr)" && dnf copr enable -y tavie/ros2
+
+# Install ROS2 base + demo nodes
+RUN dnf install -y ros-jazzy-ros-base ros-jazzy-demo-nodes-cpp ros-jazzy-demo-nodes-py && dnf clean all
+
+# Configure library paths for ROS2
+RUN echo "/usr/lib64/ros-jazzy/lib" > /etc/ld.so.conf.d/ros2.conf && ldconfig
+
+# Set up writable HOME for ROS2 logging (required for non-root / containerized usage)
+ENV HOME=/tmp/ros-home
+RUN mkdir -p /tmp/ros-home
+
+# Set up ROS2 environment for login shells
+RUN echo "source /usr/lib64/ros-jazzy/setup.bash" > /etc/profile.d/ros2.sh && chmod +x /etc/profile.d/ros2.sh
+
+# Validate bootc compatibility
+RUN bootc container lint

@@ -9,6 +9,7 @@ This repository demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on Op
 ```
 ├── deploying-ros2-to-openshift.md # Primary documentation: architecture, strategy, findings
 ├── ros2-fedora-rhel-ecosystem-analysis.md # Ecosystem gap analysis for ROS2 on Fedora/RHEL
+├── bootc-ros2-evaluation.md # Bootc image layering evaluation for ROS2 on real hardware
 ├── README.md # Quick-start guide
 ├── examples/
 │ ├── monolithic/ # Example 1: single-pod (all-in-one) deployment
@@ -19,14 +20,17 @@ This repository demonstrates deploying ROS2 (Jazzy) with Gazebo simulation on Op
 │ │ ├── worlds/ # Custom Gazebo SDF world files
 │ │ ├── www/ # Web landing page served on port 8080
 │ │ └── k8s/ # OpenShift manifests (deployment, service, route)
-│ └── distributed-zenoh/ # Example 2: multi-pod with zenoh-bridge-ros2dds
-│ ├── Containerfile.fedora # Single image for both pods
-│ ├── entrypoint-gazebo.sh # Gazebo pod entrypoint
-│ ├── entrypoint-nav2.sh # Nav2 pod entrypoint
-│ ├── zenoh-bridge-*.json5 # Zenoh bridge configs
-│ ├── worlds/ # Gazebo world files
-│ ├── www/ # Web landing page
-│ └── k8s/ # OpenShift manifests (2 deployments, services, routes)
+│ ├── distributed-zenoh/ # Example 2: multi-pod with zenoh-bridge-ros2dds
+│ │ ├── Containerfile.fedora # Single image for both pods
+│ │ ├── entrypoint-gazebo.sh # Gazebo pod entrypoint
+│ │ ├── entrypoint-nav2.sh # Nav2 pod entrypoint
+│ │ ├── zenoh-bridge-*.json5 # Zenoh bridge configs
+│ │ ├── worlds/ # Gazebo world files
+│ │ ├── www/ # Web landing page
+│ │ └── k8s/ # OpenShift manifests (2 deployments, services, routes)
+│ └── bootc/ # Example 3: bootc image for real hardware
+│ ├── Containerfile.ros2 # Fedora 43 bootc + ROS2 Jazzy (validated)
+│ └── README.md # Build/test instructions
 ```
 
 ## Key Technical Details
