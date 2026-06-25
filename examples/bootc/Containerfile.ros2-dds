@@ -1,0 +1,22 @@
+FROM quay.io/fedora/fedora-bootc:43
+
+RUN dnf install -y "dnf5-command(copr)" && dnf copr enable -y tavie/ros2
+
+RUN dnf install -y ros-jazzy-ros-base ros-jazzy-demo-nodes-cpp ros-jazzy-demo-nodes-py ros-jazzy-cyclonedds ros-jazzy-rmw-cyclonedds-cpp && dnf clean all
+
+RUN printf "/usr/lib64/ros-jazzy/lib\n/usr/lib64/ros-jazzy/lib64\n" > /etc/ld.so.conf.d/ros2.conf && ldconfig
+
+ENV HOME=/tmp/ros-home
+RUN mkdir -p /tmp/ros-home
+
+RUN echo "source /usr/lib64/ros-jazzy/setup.bash" > /etc/profile.d/ros2.sh && chmod +x /etc/profile.d/ros2.sh
+
+COPY cyclonedds.xml /etc/cyclonedds/cyclonedds.xml
+COPY ros2-talker-dds.service /usr/lib/systemd/system/ros2-talker.service
+RUN systemctl enable ros2-talker.service
+
+# Required by bootc-image-builder for QCOW2 generation
+RUN mkdir -p /usr/lib/bootc/install && \
+    printf '[install.filesystem]\nroot-fs-type = "xfs"\n' > /usr/lib/bootc/install/00-default.toml
+
+RUN bootc container lint

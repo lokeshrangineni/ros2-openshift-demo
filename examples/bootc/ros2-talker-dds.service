@@ -1,0 +1,24 @@
+[Unit]
+Description=ROS2 Demo Talker Node (CycloneDDS)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+Environment="HOME=/tmp/ros-home"
+Environment="AMENT_PREFIX_PATH=/usr/lib64/ros-jazzy"
+Environment="PATH=/usr/lib64/ros-jazzy/bin:/usr/bin:/bin"
+Environment="LD_LIBRARY_PATH=/usr/lib64/ros-jazzy/lib:/usr/lib64/ros-jazzy/lib64"
+Environment="PYTHONPATH=/usr/lib64/ros-jazzy/lib/python3.14/site-packages"
+Environment="ROS_DOMAIN_ID=42"
+Environment="RMW_IMPLEMENTATION=rmw_cyclonedds_cpp"
+Environment="CYCLONEDDS_URI=file:///etc/cyclonedds/cyclonedds.xml"
+ExecStartPre=/bin/mkdir -p /tmp/ros-home
+ExecStart=/usr/lib64/ros-jazzy/lib/demo_nodes_cpp/talker
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

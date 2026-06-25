@@ -1,0 +1,24 @@
+[Unit]
+Description=ROS2 Demo Talker Node
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+Environment="HOME=/tmp/ros-home"
+Environment="AMENT_PREFIX_PATH=/usr/lib64/ros-jazzy"
+Environment="PATH=/usr/lib64/ros-jazzy/bin:/usr/bin:/bin"
+Environment="LD_LIBRARY_PATH=/usr/lib64/ros-jazzy/lib"
+Environment="PYTHONPATH=/usr/lib64/ros-jazzy/lib/python3.14/site-packages"
+Environment="ROS_DOMAIN_ID=42"
+ExecStartPre=/bin/mkdir -p /tmp/ros-home
+ExecStart=/usr/lib64/ros-jazzy/lib/demo_nodes_cpp/talker
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+StateDirectory=ros2
+LogsDirectory=ros2
+
+[Install]
+WantedBy=multi-user.target

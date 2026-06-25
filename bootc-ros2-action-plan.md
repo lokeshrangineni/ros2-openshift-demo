@@ -2,12 +2,12 @@
 
 ## JIRAs
 
-- **APPENG-5478**: Research bootc image layering for ROS2 on Fedora (documentation/research)
-- **APPENG-5479**: Build a minimal Fedora bootc image that boots a VM and runs a ROS2 node (proof-of-concept)
+- Research bootc image layering for ROS2 on Fedora (documentation/research)
+- Build a minimal Fedora bootc image that boots a VM and runs a ROS2 node (proof-of-concept)
 
 ## Approach
 
-Work on both JIRAs in parallel — APPENG-5478 (research) informs APPENG-5479 (hands-on PoC), and hands-on work validates the research. Each step below is small, testable, and builds on the previous one.
+Work on both tasks in parallel — the research informs the hands-on PoC, and hands-on work validates the research. Each step below is small, testable, and builds on the previous one.
 
 ---
 
@@ -66,7 +66,7 @@ mkdir -p output
 cat > config.toml <<'EOF'
 [[customizations.user]]
 name = "ros2"
-password = "ros2test"
+password = "changeme"  # Demo only — use SSH keys in production
 groups = ["wheel"]
 EOF
 
@@ -116,7 +116,7 @@ sudo virt-install \
 
 **Test:**
 - [ ] VM boots to a login prompt
-- [ ] You can log in as `ros2` / `ros2test`
+- [ ] You can log in as `ros2` / `changeme`
 - [ ] Running `cowsay "bootc works"` succeeds (confirms our custom layer is present)
 - [ ] Running `bootc status` shows the image info
 - [ ] Filesystem `/usr` is read-only: `touch /usr/test` should fail with "Read-only file system"
@@ -334,7 +334,7 @@ ros2 topic echo /chatter
 
 ## Phase 4: Cross-Network Communication (Day 4-5)
 
-**Goal:** Validate that the ROS2 node inside the bootc VM can communicate with an external ROS2 system (fulfills the APPENG-5479 requirement of communicating with an external ROS2 system).
+**Goal:** Validate that the ROS2 node inside the bootc VM can communicate with an external ROS2 system (fulfills the requirement of communicating with an external ROS2 system).
 
 ### Step 4.1: Configure DDS for cross-host communication
 
@@ -440,10 +440,10 @@ podman build --platform linux/amd64 -t localhost/bootc-ros2-systemd:v2 -f Contai
 # Push to a registry (or use local transport)
 # For local testing without a registry, copy into the VM:
 # Option A: Push to quay.io
-podman push localhost/bootc-ros2-systemd:v2 quay.io/lrangine/ros2-bootc:v2
+podman push localhost/bootc-ros2-systemd:v2 quay.io/<your-org>/ros2-bootc:v2
 
 # In the VM:
-sudo bootc switch quay.io/lrangine/ros2-bootc:v2
+sudo bootc switch quay.io/<your-org>/ros2-bootc:v2
 sudo reboot
 
 # After reboot:
@@ -473,13 +473,13 @@ rpm -q ros-jazzy-teleop-twist-keyboard   # Should NOT be found (we're back on v1
 
 **Goal:** Finalize documentation for both JIRAs.
 
-### For APPENG-5478 (Research — already mostly done)
+### For Research (already mostly done)
 
 - [ ] Review and finalize `bootc-ros2-evaluation.md` based on hands-on findings
 - [ ] Add a "Validated Findings" section documenting what was actually tested vs. theoretical
 - [ ] Note any unexpected issues or deviations from the research
 
-### For APPENG-5479 (PoC)
+### For PoC (Proof of Concept)
 
 - [ ] Commit all Containerfiles, systemd units, and config files to `examples/bootc/`
 - [ ] Write a README in `examples/bootc/README.md` with build/test instructions
@@ -538,13 +538,13 @@ examples/bootc/
 
 ## Definition of Done
 
-### APPENG-5478 (Research) ✓ when:
+### Research ✓ when:
 - [ ] `bootc-ros2-evaluation.md` is complete with validated findings
 - [ ] Conflicts documented with severity and mitigations
 - [ ] Realistic deployment paths described (RHEL 10 + Fedora 43)
 - [ ] References to official docs and prior art included
 
-### APPENG-5479 (PoC) ✓ when:
+### PoC ✓ when:
 - [ ] A bootc image with ROS2 can be built from a Containerfile
 - [ ] The image boots in a VM (QCOW2)
 - [ ] A ROS2 node starts automatically at boot (systemd)

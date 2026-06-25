@@ -1,0 +1,17 @@
+FROM quay.io/fedora/fedora-bootc:43
+
+RUN dnf install -y "dnf5-command(copr)" && dnf copr enable -y tavie/ros2
+
+RUN dnf install -y ros-jazzy-ros-base ros-jazzy-demo-nodes-cpp ros-jazzy-demo-nodes-py && dnf clean all
+
+RUN echo "/usr/lib64/ros-jazzy/lib" > /etc/ld.so.conf.d/ros2.conf && ldconfig
+
+ENV HOME=/tmp/ros-home
+RUN mkdir -p /tmp/ros-home
+
+RUN echo "source /usr/lib64/ros-jazzy/setup.bash" > /etc/profile.d/ros2.sh && chmod +x /etc/profile.d/ros2.sh
+
+COPY ros2-talker.service /usr/lib/systemd/system/ros2-talker.service
+RUN systemctl enable ros2-talker.service
+
+RUN bootc container lint
