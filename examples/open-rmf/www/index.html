@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open-RMF Hotel Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+    .container { max-width: 800px; width: 100%; }
+    h1 { font-size: 2.2rem; margin-bottom: 0.5rem; color: #fff; }
+    .subtitle { color: #8892b0; font-size: 1.1rem; margin-bottom: 2rem; }
+    .info { background: #16213e; border: 1px solid #0f3460; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .info h3 { color: #e94560; margin-bottom: 1rem; }
+    .info table { width: 100%; border-collapse: collapse; }
+    .info td { padding: 0.4rem 0; border-bottom: 1px solid #0f3460; font-size: 0.9rem; }
+    .info td:first-child { color: #8892b0; width: 40%; }
+    .routes { background: #16213e; border: 1px solid #0f3460; border-radius: 12px; padding: 1.5rem; }
+    .routes h3 { color: #e94560; margin-bottom: 1rem; }
+    .routes code { background: #0d1117; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+    .routes li { margin-bottom: 0.6rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Open-RMF Hotel Demo</h1>
+    <p class="subtitle">Multi-fleet robot orchestration on OpenShift — 3 fleets, 4 robots, lifts & doors</p>
+
+    <div class="info">
+      <h3>Demo Details</h3>
+      <table>
+        <tr><td>Environment</td><td>3-level hotel (lobby + 2 guest floors)</td></tr>
+        <tr><td>Fleets</td><td>tinyRobot (patrol) · deliveryRobot (delivery) · cleanerBotA (cleaning)</td></tr>
+        <tr><td>Robots</td><td>4 total — tinyBot_1, deliveryBot_1, cleanerBotA_1, cleanerBotA_2</td></tr>
+        <tr><td>Infrastructure</td><td>2 lifts · multiple doors · charging stations</td></tr>
+        <tr><td>Navigation</td><td>Slot car plugin (lightweight, no GPU)</td></tr>
+        <tr><td>Platform</td><td>OpenShift · ROS 2 Jazzy · Gazebo (headless)</td></tr>
+      </table>
+    </div>
+
+    <div class="routes">
+      <h3>Access Points</h3>
+      <ul>
+        <li><strong>Dashboard</strong> — <code>openrmf-dashboard</code> route (task dispatch, fleet status, map)</li>
+        <li><strong>RViz2 / noVNC</strong> — <code>openrmf-vnc</code> route via <strong>HTTP</strong> (real-time robot visualization)</li>
+        <li><strong>API</strong> — <code>openrmf-api</code> route (REST: /fleets, /tasks, /building_map)</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

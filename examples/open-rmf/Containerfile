@@ -1,0 +1,160 @@
+# Open-RMF Hotel Demo — All-in-One Container
+# Builds rmf_demos from source on Ubuntu 24.04 + ROS 2 Jazzy
+#
+# Build: podman build --platform linux/amd64 -t quay.io/lrangine/ros2-demo:openrmf-hotel -f Containerfile .
+# Run:   podman run --rm -p 3000:3000 -p 8000:8000 -p 6080:6080 -p 8080:8080 quay.io/lrangine/ros2-demo:openrmf-hotel
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    ROS_DISTRO=jazzy \
+    RMW_IMPLEMENTATION=rmw_fastrtps_cpp \
+    LANG=en_US.UTF-8
+
+# Install ROS 2 Jazzy
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      software-properties-common \
+      curl \
+      gnupg \
+      lsb-release \
+      locales \
+    && locale-gen en_US.UTF-8 \
+    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | apt-key add - \
+    && echo "deb http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros2.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+      ros-jazzy-ros-base \
+      ros-jazzy-rmf-dev \
+      ros-jazzy-ros-gz \
+      ros-dev-tools \
+      python3-pip \
+      python3-colcon-common-extensions \
+      git \
+      wget \
+      unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build rmf_demos from source (jazzy branch)
+WORKDIR /opt/rmf_demos
+RUN wget -q https://github.com/open-rmf/rmf_demos/archive/refs/heads/jazzy.zip -O rmf_demos.zip && \
+    unzip -q rmf_demos.zip && \
+    mkdir -p src && \
+    mv rmf_demos-jazzy src/rmf_demos && \
+    rm rmf_demos.zip
+
+RUN . /opt/ros/jazzy/setup.sh && \
+    rosdep update && \
+    rosdep install --from-paths src --ignore-src -r -y 2>/dev/null || true
+
+RUN . /opt/ros/jazzy/setup.sh && \
+    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+# Override fleet configs to disable battery drain (robots never run out during demo)
+COPY config/hotel/ /opt/rmf_demos/install/rmf_demos/share/rmf_demos/config/hotel/
+
+# Create Gazebo model symlinks if needed (path varies by build)
+RUN MODELS_DIR=$(find /opt/rmf_demos/install -path "*/rmf_demos_assets/share/rmf_demos_assets/models" -type d 2>/dev/null | head -1) && \
+    if [ -n "${MODELS_DIR}" ] && [ -d "${MODELS_DIR}" ]; then \
+      cd "${MODELS_DIR}" && \
+      for model in Caddy CleanerBotA DeliveryRobot HospitalRobot RobotPlaceholder TeleportDispenser TeleportIngestor TinyRobot; do \
+        [ ! -e "./${model}" ] && [ -d "../${model}" ] && ln -s "../${model}" "./${model}" 2>/dev/null; \
+      done; \
+    fi || true
+
+# Create model://Open-RMF/<model> lookup structure for Gazebo
+RUN mkdir -p /opt/rmf_models && \
+    ln -s /opt/rmf_demos/install/rmf_demos_assets/share/rmf_demos_assets/models /opt/rmf_models/Open-RMF
+
+# Pre-download Gazebo Fuel models required by the Hotel world
+ENV GZ_FUEL_CACHE_PATH=/opt/gz_fuel_cache
+RUN mkdir -p /opt/fuel_models && \
+    MODELS="BathroomSink BedsideTable Bookshelf CoffeeTable Desk DeskChair DigitalKiosk FoodCourtBenchShort FoodCourtTable1 Fridge HeadphonesRack1 KitchenCountertop MainTable NormalBed NurseDesk Shower Sofa StorageRack Suitcase1 Suitcase2 Toilet TrashBin VendingMachine WoodenChair Chair EscalatorStart" && \
+    for model in $MODELS; do \
+      echo "Downloading: $model" && \
+      VER=$(curl -sf "https://fuel.gazebosim.org/1.0/OpenRobotics/models/${model}" | python3 -c "import sys,json;print(json.load(sys.stdin).get('version',1))" 2>/dev/null || echo "1") && \
+      curl -sfL "https://fuel.gazebosim.org/1.0/OpenRobotics/models/${model}/${VER}/${model}.zip" -o /tmp/m.zip && \
+      mkdir -p "/opt/fuel_models/${model}" && \
+      unzip -qo /tmp/m.zip -d "/opt/fuel_models/${model}/" && \
+      rm -f /tmp/m.zip || \
+      echo "WARN: Could not download $model"; \
+    done && \
+    echo "Also trying url-encoded: Cafe table" && \
+    curl -sfL "https://fuel.gazebosim.org/1.0/OpenRobotics/models/Cafe%20table/2/Cafe%20table.zip" -o /tmp/m.zip && \
+    mkdir -p "/opt/fuel_models/Cafe table" && unzip -qo /tmp/m.zip -d "/opt/fuel_models/Cafe table/" && rm -f /tmp/m.zip || true
+
+# Create lowercase/underscore symlinks for model SDF internal mesh references
+RUN cd /opt/fuel_models && \
+    for dir in */; do \
+      name="${dir%/}"; \
+      alt=$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr ' ' '_'); \
+      [ "$alt" != "$name" ] && [ ! -e "$alt" ] && ln -s "$name" "$alt" 2>/dev/null; \
+    done && \
+    mkdir -p /opt/gz_fuel_cache
+
+# Install noVNC stack for RViz2 visualization
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      tigervnc-standalone-server \
+      novnc \
+      websockify \
+      openbox \
+      mesa-utils \
+      libgl1-mesa-dri \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies for fleet_manager + rmf-web API server
+# Pin versions to match rmf-web api-server's requirements (setup.py)
+RUN pip3 install --break-system-packages --ignore-installed \
+      python-socketio~=5.11.1 \
+      "fastapi~=0.109.0" \
+      "uvicorn[standard]~=0.28.0" \
+      "pydantic~=2.8.0" \
+      "tortoise-orm~=0.21.4" \
+      websockets \
+      aiosqlite
+
+# Build rmf-web API server from source
+WORKDIR /opt/rmf-web
+RUN git clone --depth 1 -b jazzy https://github.com/open-rmf/rmf-web.git . && \
+    cd packages/api-server && \
+    pip3 install --break-system-packages -e . || \
+    pip3 install --break-system-packages . || \
+    echo "WARN: rmf-web api-server install failed"
+RUN sed -i 's/"host": "127.0.0.1"/"host": "0.0.0.0"/' /opt/rmf-web/packages/api-server/api_server/default_config.py && \
+    sed -i 's|"public_url": "http://localhost:8000"|"public_url": ""|' /opt/rmf-web/packages/api-server/api_server/default_config.py && \
+    sed -i 's/^user_dep = authenticator.fastapi_dep()$/# Demo mode: bypass authentication\nasync def _demo_user_dep():\n    return User(username="admin", is_admin=True)\nuser_dep = _demo_user_dep/' /opt/rmf-web/packages/api-server/api_server/authenticator.py
+
+# Build rmf-web dashboard (React static files) — requires Node.js 20+ and pnpm
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs python3.12-venv && \
+    npm install -g pnpm && \
+    cd /opt/rmf-web && \
+    pnpm install && \
+    cd packages/rmf-dashboard-framework && \
+    pnpm run --filter '{.}^...' build && \
+    cd examples/demo && \
+    npx vite build -c ../shared/vite.config.ts --outDir /opt/rmf-web/dashboard-dist
+
+# Cleanup build dependencies to reduce image size
+RUN rm -rf /root/.local/share/pnpm/store /opt/rmf-web/node_modules \
+    /opt/rmf-web/.git /var/lib/apt/lists/*
+
+# Make dashboard dist writable for runtime API URL patching
+RUN chmod -R 777 /opt/rmf-web/dashboard-dist
+
+# Prepare non-root runtime directories
+RUN mkdir -p /tmp/ros-home/.ros /tmp/ros-home/.gz /tmp/.X11-unix \
+    /opt/rmf-web/packages/api-server/run/cache \
+    && chmod -R 777 /tmp/ros-home \
+    && chmod -R 777 /opt/rmf-web/packages/api-server/run \
+    && chmod 1777 /tmp/.X11-unix \
+    && mkdir -p /opt/ros2-demo/www \
+    && echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=vnc_lite.html?autoconnect=true"></head></html>' > /usr/share/novnc/index.html
+
+WORKDIR /opt/ros2-demo
+
+COPY entrypoint.sh /entrypoint.sh
+COPY www/ /opt/ros2-demo/www/
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 3000 6080 8000 8080
+
+CMD ["/entrypoint.sh"]

@@ -1,0 +1,156 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lokesh-ros2-openrmf-demo
+  labels:
+    app: openrmf-hotel-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openrmf-hotel
+  namespace: lokesh-ros2-openrmf-demo
+  labels:
+    app: openrmf-hotel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openrmf-hotel
+  template:
+    metadata:
+      labels:
+        app: openrmf-hotel
+    spec:
+      containers:
+        - name: openrmf-hotel
+          image: quay.io/lrangine/ros2-demo:openrmf-hotel
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: dashboard
+            - containerPort: 6080
+              name: novnc
+            - containerPort: 8000
+              name: api
+            - containerPort: 8080
+              name: web
+          resources:
+            requests:
+              cpu: "6"
+              memory: "8Gi"
+            limits:
+              cpu: "12"
+              memory: "16Gi"
+          env:
+            - name: RMW_IMPLEMENTATION
+              value: "rmw_fastrtps_cpp"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openrmf-hotel
+  namespace: lokesh-ros2-openrmf-demo
+  labels:
+    app: openrmf-hotel
+spec:
+  selector:
+    app: openrmf-hotel
+  ports:
+    - name: dashboard
+      port: 3000
+      targetPort: 3000
+    - name: novnc
+      port: 6080
+      targetPort: 6080
+    - name: api
+      port: 8000
+      targetPort: 8000
+    - name: web
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: openrmf-dashboard
+  namespace: lokesh-ros2-openrmf-demo
+  labels:
+    app: openrmf-hotel
+spec:
+  to:
+    kind: Service
+    name: openrmf-hotel
+  port:
+    targetPort: dashboard
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: openrmf-vnc
+  namespace: lokesh-ros2-openrmf-demo
+  labels:
+    app: openrmf-hotel
+  annotations:
+    haproxy.router.openshift.io/timeout: 3600s
+    haproxy.router.openshift.io/websocket: "true"
+spec:
+  to:
+    kind: Service
+    name: openrmf-hotel
+  port:
+    targetPort: novnc
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: openrmf-api
+  namespace: lokesh-ros2-openrmf-demo
+  labels:
+    app: openrmf-hotel
+  annotations:
+    haproxy.router.openshift.io/timeout: 3600s
+spec:
+  to:
+    kind: Service
+    name: openrmf-hotel
+  port:
+    targetPort: api
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: openrmf-web
+  namespace: lokesh-ros2-openrmf-demo
+  labels:
+    app: openrmf-hotel
+spec:
+  to:
+    kind: Service
+    name: openrmf-hotel
+  port:
+    targetPort: web
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
