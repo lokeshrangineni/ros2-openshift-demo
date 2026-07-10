@@ -21,8 +21,7 @@ Multi-robot fleet orchestration on OpenShift using the [rmf_demos Hotel world](h
 │  Gazebo Server (headless) ─── Hotel world (3 levels, slot car)   │
 │  RMF Core ─── traffic schedule + door/lift supervisors           │
 │  Fleet Adapters x3 ─── tinyRobot, deliveryRobot, cleanerBotA    │
-│  rmf-web API (:8000) ─── FastAPI backend                         │
-│  rmf-web Dashboard (:3000) ─── React frontend                    │
+│  rmf-web API + Dashboard (:8000) ─── FastAPI + React (unified)   │
 │  RViz2 + noVNC (:6080) ─── optional schedule visualizer          │
 │  Landing page (:8080)                                             │
 │                                                                    │
@@ -165,9 +164,9 @@ What you'll see:
 - Lifts and doors changing state as robots interact with them
 - Multiple robots negotiating shared corridors
 
-### Option 2: Dashboard Map (position snapshots)
+### Option 2: Dashboard Map (real-time via WebSocket)
 
-The rmf-web dashboard shows the hotel map with robot positions. Due to the reverse proxy not supporting WebSocket, positions update on page refresh rather than live streaming.
+The rmf-web dashboard shows the hotel map with robot positions updating in real-time via Socket.IO WebSocket.
 
 ```
 https://openrmf-dashboard-lokesh-ros2-openrmf-demo.apps.<cluster-domain>/
@@ -177,8 +176,7 @@ What you'll see:
 - Hotel floor plan with robot markers
 - Task queue and status (queued → executing → completed)
 - Fleet status panel
-
-**Tip:** Refresh the page periodically to see updated positions.
+- Real-time position updates via Socket.IO
 
 ### Option 3: CLI Fleet State Stream (text-based, fully real-time)
 
@@ -194,7 +192,7 @@ $OC_EXEC "$ROS_ENV && ros2 topic echo /task_api_responses --once"
 
 ### Option 4: REST API (programmatic)
 
-Query the API server directly for fleet and task data:
+Query the API server directly for fleet and task data (same URL as dashboard):
 
 ```bash
 # Get all fleets and robot positions
@@ -255,7 +253,7 @@ $OC_EXEC "$ROS_ENV && \
 # Open noVNC in browser (MUST use HTTP, not HTTPS):
 echo "http://openrmf-vnc-$NAMESPACE.apps.<cluster-domain>/"
 
-# Dashboard (task status, map view):
+# Dashboard (task dispatch, real-time map view):
 echo "https://openrmf-dashboard-$NAMESPACE.apps.<cluster-domain>/"
 ```
 
@@ -269,7 +267,7 @@ echo "https://openrmf-dashboard-$NAMESPACE.apps.<cluster-domain>/"
 | Simulation | Gazebo (headless) + slot car plugin |
 | Fleet Management | Open-RMF (traffic schedule, task dispatch, door/lift supervisors) |
 | Fleet Adapters | rmf_demos_fleet_adapter (Python, REST-based) |
-| Dashboard | rmf-web (React + FastAPI) |
+| Dashboard | rmf-web (React + FastAPI, unified on port 8000) |
 | Communication | ROS 2 DDS (localhost, single pod) |
 | Container | Ubuntu 24.04 + ROS 2 Jazzy |
 
@@ -294,7 +292,6 @@ RViz2 with software rendering (LLVMpipe) consumes ~120% CPU. The extra headroom 
 | VNC shows black screen | RViz2 window not managed without WM | `openbox` starts before RViz2 |
 | WebSocket fails through route | HAProxy needs explicit WebSocket support | `haproxy.router.openshift.io/websocket: "true"` annotation |
 | Robots don't move (tasks queued) | Battery depleted after long sim runtime | Restart pod to reset simulation fresh |
-| Dashboard not real-time | Reverse proxy doesn't support socket.io WebSocket | Refresh page to see updated positions |
 
 ---
 
@@ -456,6 +453,7 @@ examples/open-rmf/
 ├── DEMO-REQUIREMENTS.md      # Full requirements & design decisions
 ├── Containerfile             # Single all-in-one container image
 ├── entrypoint.sh             # Launches all components
+├── serve_all.py              # Unified server: API + dashboard on port 8000
 └── k8s/
     └── all-in-one.yaml       # Deployment, service, and routes
 ```

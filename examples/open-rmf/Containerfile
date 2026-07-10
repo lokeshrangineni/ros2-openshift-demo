@@ -2,7 +2,7 @@
 # Builds rmf_demos from source on Ubuntu 24.04 + ROS 2 Jazzy
 #
 # Build: podman build --platform linux/amd64 -t quay.io/lrangine/ros2-demo:openrmf-hotel -f Containerfile .
-# Run:   podman run --rm -p 3000:3000 -p 8000:8000 -p 6080:6080 -p 8080:8080 quay.io/lrangine/ros2-demo:openrmf-hotel
+# Run:   podman run --rm -p 8000:8000 -p 6080:6080 -p 8080:8080 quay.io/lrangine/ros2-demo:openrmf-hotel
 
 FROM ubuntu:24.04
 
@@ -122,6 +122,9 @@ RUN sed -i 's/"host": "127.0.0.1"/"host": "0.0.0.0"/' /opt/rmf-web/packages/api-
     sed -i 's|"public_url": "http://localhost:8000"|"public_url": ""|' /opt/rmf-web/packages/api-server/api_server/default_config.py && \
     sed -i 's/^user_dep = authenticator.fastapi_dep()$/# Demo mode: bypass authentication\nasync def _demo_user_dep():\n    return User(username="admin", is_admin=True)\nuser_dep = _demo_user_dep/' /opt/rmf-web/packages/api-server/api_server/authenticator.py
 
+# Fix: building_map subscription must replay current value to new subscribers
+RUN python3 -c "path='/opt/rmf-web/packages/api-server/api_server/routes/building_map.py'; c=open(path).read(); old='def sub_building_map(_req: SubscriptionRequest):\n    return get_rmf_events().building_map.pipe(rxops.filter(lambda x: x is not None))'; new='def sub_building_map(_req: SubscriptionRequest):\n    events = get_rmf_events()\n    obs = events.building_map.pipe(rxops.filter(lambda x: x is not None))\n    current = events.building_map.value\n    if current is not None:\n        return obs.pipe(rxops.start_with(current))\n    return obs'; open(path,'w').write(c.replace(old,new)); print('Patched building_map subscription')"
+
 # Build rmf-web dashboard (React static files) — requires Node.js 20+ and pnpm
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y --no-install-recommends nodejs python3.12-venv && \
@@ -140,6 +143,9 @@ RUN rm -rf /root/.local/share/pnpm/store /opt/rmf-web/node_modules \
 # Make dashboard dist writable for runtime API URL patching
 RUN chmod -R 777 /opt/rmf-web/dashboard-dist
 
+# Add unified server script (serves API + dashboard from single port)
+COPY serve_all.py /opt/rmf-web/serve_all.py
+
 # Prepare non-root runtime directories
 RUN mkdir -p /tmp/ros-home/.ros /tmp/ros-home/.gz /tmp/.X11-unix \
     /opt/rmf-web/packages/api-server/run/cache \
@@ -155,6 +161,6 @@ COPY entrypoint.sh /entrypoint.sh
 COPY www/ /opt/ros2-demo/www/
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 3000 6080 8000 8080
+EXPOSE 6080 8000 8080
 
 CMD ["/entrypoint.sh"]

@@ -22,17 +22,20 @@ spec:
       labels:
         app: openrmf-hotel
     spec:
+      tolerations:
+        - key: cpu-taint
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
       containers:
         - name: openrmf-hotel
           image: quay.io/lrangine/ros2-demo:openrmf-hotel
           imagePullPolicy: Always
           ports:
-            - containerPort: 3000
-              name: dashboard
-            - containerPort: 6080
-              name: novnc
             - containerPort: 8000
               name: api
+            - containerPort: 6080
+              name: novnc
             - containerPort: 8080
               name: web
           resources:
@@ -72,15 +75,12 @@ spec:
   selector:
     app: openrmf-hotel
   ports:
-    - name: dashboard
-      port: 3000
-      targetPort: 3000
-    - name: novnc
-      port: 6080
-      targetPort: 6080
     - name: api
       port: 8000
       targetPort: 8000
+    - name: novnc
+      port: 6080
+      targetPort: 6080
     - name: web
       port: 8080
       targetPort: 8080
@@ -92,12 +92,15 @@ metadata:
   namespace: lokesh-ros2-openrmf-demo
   labels:
     app: openrmf-hotel
+  annotations:
+    haproxy.router.openshift.io/timeout: 3600s
+    haproxy.router.openshift.io/websocket: "true"
 spec:
   to:
     kind: Service
     name: openrmf-hotel
   port:
-    targetPort: dashboard
+    targetPort: api
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
@@ -118,25 +121,6 @@ spec:
     name: openrmf-hotel
   port:
     targetPort: novnc
----
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: openrmf-api
-  namespace: lokesh-ros2-openrmf-demo
-  labels:
-    app: openrmf-hotel
-  annotations:
-    haproxy.router.openshift.io/timeout: 3600s
-spec:
-  to:
-    kind: Service
-    name: openrmf-hotel
-  port:
-    targetPort: api
-  tls:
-    termination: edge
-    insecureEdgeTerminationPolicy: Redirect
 ---
 apiVersion: route.openshift.io/v1
 kind: Route

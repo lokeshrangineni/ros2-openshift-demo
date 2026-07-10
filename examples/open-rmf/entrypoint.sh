@@ -53,116 +53,36 @@ echo "[demo] noVNC available at http://localhost:${NOVNC_PORT}"
 echo "[demo] Starting landing page on port ${WEB_PORT}..."
 python3 -m http.server "${WEB_PORT}" --directory /opt/ros2-demo/www 2>/dev/null &
 
-# --- 3. rmf-web API server ---
-echo "[demo] Starting rmf-web API server on port 8000..."
+# --- 3. rmf-web API server + Dashboard (single port, no proxy) ---
+echo "[demo] Starting rmf-web API server + dashboard on port 8000..."
 mkdir -p /opt/rmf-web/packages/api-server/run/cache 2>/dev/null || \
   mkdir -p /tmp/ros-home/api-cache
+
+DASHBOARD_DIR=""
+if [ -d /opt/rmf-web/dashboard-dist ]; then
+  DASHBOARD_DIR="/opt/rmf-web/dashboard-dist"
+  # Replace hardcoded localhost URLs with window.location.origin so Socket.IO
+  # connects to the correct server (new URL("") throws TypeError in browsers)
+  find "${DASHBOARD_DIR}" -name "*.js" -exec sed -i 's|"http://localhost:8000"|window.location.origin|g' {} + 2>/dev/null || true
+  find "${DASHBOARD_DIR}" -name "*.js" -exec sed -i 's|"http://localhost:8006"|window.location.origin|g' {} + 2>/dev/null || true
+fi
+
 if [ -d /opt/rmf-web/packages/api-server ]; then
   cd /opt/rmf-web/packages/api-server
   if [ ! -w run/cache ]; then
     mkdir -p /tmp/ros-home/api-cache
     ln -sf /tmp/ros-home/api-cache run/cache 2>/dev/null || true
   fi
-  python3 -m api_server &
+  python3 /opt/rmf-web/serve_all.py &
   API_PID=$!
   cd /opt/ros2-demo
-elif python3 -c "import api_server" 2>/dev/null; then
-  python3 -m api_server &
-  API_PID=$!
 else
   echo "[demo] WARN: rmf-web API server not found, skipping"
   API_PID=""
 fi
 sleep 2
 
-# --- 4. rmf-web Dashboard (served via reverse proxy to handle same-origin API calls) ---
-echo "[demo] Starting rmf-web dashboard on port 3000..."
-DASHBOARD_DIR=""
-if [ -d /opt/rmf-web/dashboard-dist ]; then
-  DASHBOARD_DIR="/opt/rmf-web/dashboard-dist"
-fi
-
-if [ -n "${DASHBOARD_DIR}" ]; then
-  # Patch any hardcoded API URLs to empty string (same-origin via reverse proxy on port 3000)
-  find "${DASHBOARD_DIR}" -name "*.js" -exec sed -i 's|http://localhost:8000||g' {} + 2>/dev/null || true
-  find "${DASHBOARD_DIR}" -name "*.js" -exec sed -i 's|http://localhost:8006||g' {} + 2>/dev/null || true
-
-  # Start reverse proxy that serves dashboard static files AND proxies API requests to localhost:8000
-  python3 - "${DASHBOARD_DIR}" <<'PROXY_SCRIPT' &
-import sys, os, http.server, urllib.request, urllib.error
-
-DASHBOARD_DIR = sys.argv[1]
-API_UPSTREAM = "http://localhost:8000"
-
-class DashboardProxy(http.server.SimpleHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=DASHBOARD_DIR, **kwargs)
-
-    def do_GET(self):
-        # Check if the file exists in the dashboard directory
-        file_path = os.path.join(DASHBOARD_DIR, self.path.lstrip("/").split("?")[0])
-        if self.path == "/" or self.path.startswith("/assets/") or os.path.isfile(file_path):
-            super().do_GET()
-        elif self.path.endswith((".html",)) and not os.path.isfile(file_path):
-            # SPA fallback: serve index.html for client-side routes
-            self.path = "/"
-            super().do_GET()
-        else:
-            self._proxy()
-
-    def do_POST(self):
-        self._proxy()
-
-    def do_PUT(self):
-        self._proxy()
-
-    def do_DELETE(self):
-        self._proxy()
-
-    def do_OPTIONS(self):
-        self._proxy()
-
-    def _proxy(self):
-        try:
-            url = f"{API_UPSTREAM}{self.path}"
-            body = None
-            if "Content-Length" in self.headers:
-                body = self.rfile.read(int(self.headers["Content-Length"]))
-            req = urllib.request.Request(url, data=body, method=self.command)
-            for key, val in self.headers.items():
-                if key.lower() not in ("host", "connection"):
-                    req.add_header(key, val)
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                self.send_response(resp.status)
-                for key, val in resp.getheaders():
-                    if key.lower() not in ("transfer-encoding", "connection"):
-                        self.send_header(key, val)
-                self.end_headers()
-                self.wfile.write(resp.read())
-        except urllib.error.HTTPError as e:
-            self.send_response(e.code)
-            for key, val in e.headers.items():
-                if key.lower() not in ("transfer-encoding", "connection"):
-                    self.send_header(key, val)
-            self.end_headers()
-            self.wfile.write(e.read())
-        except Exception as e:
-            self.send_response(502)
-            self.end_headers()
-            self.wfile.write(str(e).encode())
-
-    def log_message(self, format, *args):
-        pass
-
-http.server.HTTPServer(("0.0.0.0", 3000), DashboardProxy).serve_forever()
-PROXY_SCRIPT
-  DASH_PID=$!
-else
-  echo "[demo] WARN: rmf-web dashboard not found, skipping"
-  DASH_PID=""
-fi
-
-# --- 5. Launch rmf_demos Hotel (headless Gazebo + RMF core + fleet adapters) ---
+# --- 4. Launch rmf_demos Hotel (headless Gazebo + RMF core + fleet adapters) ---
 echo "[demo] Launching Hotel world (headless Gazebo + slot car + RMF)..."
 
 ros2 launch rmf_demos_gz hotel.launch.xml \
@@ -171,7 +91,7 @@ ros2 launch rmf_demos_gz hotel.launch.xml \
   use_sim_time:=true &
 SIM_PID=$!
 
-# --- 6. RViz2 schedule visualizer (optional, software-rendered) ---
+# --- 5. RViz2 schedule visualizer (optional, software-rendered) ---
 (
   echo "[demo] Waiting for simulation to start before launching RViz2..."
   sleep 30
@@ -196,8 +116,7 @@ echo ""
 echo "=============================================="
 echo " Demo is starting up..."
 echo ""
-echo " Dashboard:  http://localhost:3000"
-echo " API:        http://localhost:8000"
+echo " Dashboard:  http://localhost:8000"
 echo " noVNC:      http://localhost:${NOVNC_PORT}"
 echo " Landing:    http://localhost:${WEB_PORT}"
 echo ""
@@ -211,7 +130,7 @@ echo "=============================================="
 # --- Signal handling ---
 term_handler() {
   echo "[demo] Shutting down..."
-  kill "${SIM_PID:-}" "${API_PID:-}" "${DASH_PID:-}" "${XVNC_PID:-}" 2>/dev/null || true
+  kill "${SIM_PID:-}" "${API_PID:-}" "${XVNC_PID:-}" 2>/dev/null || true
   pkill -P $$ 2>/dev/null || true
   wait "${SIM_PID}" 2>/dev/null || true
 }
